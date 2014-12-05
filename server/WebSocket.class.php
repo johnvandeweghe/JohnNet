@@ -1,17 +1,17 @@
-<?php  
+<?php
+namespace Websocket;
+
 //Attempts to implement RFC6455 http://datatracker.ietf.org/doc/rfc6455/?include_text=1
 class WebSocket{
 	private $master;
 	private $sockets = array();
+	private $channels = array();
 	private $users   = array();
+
 	private $GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-	
-	public $routes = array();
-	
-	private $actionQueue = array();
-	private $actionQueueTimes = array();
 
 	private $address, $port;
+
 	function __construct($address,$port){
 		$this->address = $address;
 		$this->port = $port;
@@ -89,27 +89,12 @@ class WebSocket{
 					}
 				}
 			}
-			$time = microtime(true);
-			
-			foreach($this->actionQueue as $key => $action){
-				if($time - $this->actionQueueTimes[$key]["last"] > $this->actionQueueTimes[$key]["delta"]){
-					$action->run();
-					$this->actionQueueTimes[$key]["last"] = $time;
-				}
-			}
 		}
 	}
 	
-	//Add an action to the queue, actions with run as soon as $soonestRunDelta and as late as socket_select's timeout, based on when the next change occurs in socket_select
-	//WARNING: Actions taking significant time to run could cause issues with socket_select
-	public function addAction(Action $action, $soonestRunDelta){
-		$this->actionQueue[] = $action;
-		$this->actionQueueTimes[] = array("delta" => $soonestRunDelta, "last" => 0);
-	}
-	
 	//Add an event handler to run for users that connect on the path of $route
-	public function addEventHandler($route, WebSocketEventHandler $handler){
-		$this->routes[$route] = $handler;
+	public function addEventHandler(WebSocketEventHandler $handler){
+		$this->handlers[] = $handler;
 	}
 
 	private function onMessage($user, $msg, $opcode=0x1){
@@ -132,12 +117,6 @@ class WebSocket{
 		socket_write($user->socket, $msg, strlen($msg));
 	}
 	
-	public function sendToRoute($route, $msg, $opcode=0x1){
-		foreach($this->users as $user)
-			if($user->route == $route)
-				$this->send($user, $msg, $opcode);
-	}
-	
 	public function sendToRouteExcluding($route, $user, $msg, $opcode=0x1){
 		foreach($this->users as $u)
 			if($u->route == $route && $user->id != $u->id)
@@ -145,7 +124,7 @@ class WebSocket{
 	}
 
 	private function connect($socket){
-		$user = new WebSocketUser();
+		$user = new User();
 		$user->socket = $socket;
 		$this->users[] = $user;
 		end($this->users);
@@ -193,9 +172,6 @@ class WebSocket{
 		
 		if(!isset($headers['Host']) || !(isset($headers['Upgrade']) && strtolower($headers['Upgrade']) == 'websocket') || !(isset($headers['Connection']) && stristr($headers['Connection'], 'upgrade') !== false) || !isset($headers['Sec-WebSocket-Key']) || !(isset($headers['Sec-WebSocket-Version']) && $headers['Sec-WebSocket-Version'] == 13))
 			return 400;
-			
-		if(!isset($this->routes[$get]))
-			return 404;
 		
 		$upgrade  = "HTTP/1.1 101 Switching Protocols\r\n" .
 					"Upgrade: websocket\r\n" .
@@ -289,14 +265,3 @@ class WebSocket{
 		return $header . $text;
 	} 
 }
-
-class WebSocketUser {
-	public $id;
-	public $socket;
-	public $handshake = false;
-	public $closed = false;
-	public $route = '';
-	public $cookie;
-}
-
-?>

@@ -1,4 +1,4 @@
-<?php
+                                                                cmmmmm    xxm     xxxxxxxx                                                     <?php
 if (!defined('INCLUDED')) {
     header('HTTP/1.1 404 Not Found', 404);
 	exit;
