@@ -3,7 +3,7 @@ namespace Websocket;
 
 class Write extends \Worker {
 
-	$this->user = null;
+	private $user = null;
 	
 	function __construct(User &$user, Websocket $ws){
 		$this->user = $user;
