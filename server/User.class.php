@@ -14,7 +14,7 @@ class User {
 		if(!$this->handshake)
 			return;
 
-		$payload = $this->frame($payload, $opcode);
+		$payload = WebSocket::frame($payload, $opcode);
 		socket_write($this->socket, $payload, strlen($payload));
 	}
 }
