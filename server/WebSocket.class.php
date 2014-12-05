@@ -97,31 +97,34 @@ class WebSocket{
 		$this->handlers[] = $handler;
 	}
 
-	private function onMessage($user, $msg, $opcode=0x1){
-		$this->routes[$user->route]->onMessage($user, $msg, $opcode);
+	private function onMessage(User $user, $payload, $opcode=0x1){
+		$payload = json_decode($payload, true);
+		if($payload && isset($payload['channel']) && isset($payload['payload']) && $opcode === 0x1){
+			foreach($this->handlers as $handler){
+				if($payload === 'subscribe'){
+					$handler->onSubscribe($user, $channel);
+				} else {
+					$handler->onPublish($user, $channel, $payload);
+				}
+			}
+		} else {
+			//invalid payload
+		}
 	}
 	
 	private function onConnect($user){
-		$this->routes[$user->route]->onConnect($user);
+		foreach($this->handlers as $handler){
+			$handler->onConnect($user);
+		}
 	}
 	
 	private function onClose($user){
-		$this->routes[$user->route]->onClose($user);
+		foreach($this->handlers as $handler){
+			$handler->onClose($user);
+		}
 	}
 
-	//Send a message to a specific user, $opcode corresponds to the RFC opcodes (1=text, 2=binary)
-	public function send($user, $msg, $opcode=0x1){
-		if(!$user->handshake)
-			return;
-		$msg = $this->frame($msg, $opcode);
-		socket_write($user->socket, $msg, strlen($msg));
-	}
 	
-	public function sendToRouteExcluding($route, $user, $msg, $opcode=0x1){
-		foreach($this->users as $u)
-			if($u->route == $route && $user->id != $u->id)
-				$this->send($u, $msg, $opcode);
-	}
 
 	private function connect($socket){
 		$user = new User();
@@ -133,7 +136,7 @@ class WebSocket{
 	}
 	
 	//Mark a user closed and send them $msg as the reason
-	public function close($user, $msg, $force = false){
+	public function close(User $user, $msg, $force = false){
 		$user->closed = true;
 		$close = $this->frame($msg, 0x8);
 		socket_write($user->socket,$close,strlen($close));
@@ -159,7 +162,7 @@ class WebSocket{
 		}
 	}
 
-	private function handshake($user,$buffer){		
+	private function handshake(User $user,$buffer){		
 		$temp = explode("\r\n", str_replace("\r\n\r\n", "", $buffer));
 
 		$get = str_replace(array("GET "," HTTP/1.1"), "", array_shift($temp));
@@ -170,22 +173,31 @@ class WebSocket{
 			$headers[$key] = $value;
 		}
 		
-		if(!isset($headers['Host']) || !(isset($headers['Upgrade']) && strtolower($headers['Upgrade']) == 'websocket') || !(isset($headers['Connection']) && stristr($headers['Connection'], 'upgrade') !== false) || !isset($headers['Sec-WebSocket-Key']) || !(isset($headers['Sec-WebSocket-Version']) && $headers['Sec-WebSocket-Version'] == 13))
+		if(!isset($headers['Host']) ||
+			!(isset($headers['Upgrade']) && strtolower($headers['Upgrade']) == 'websocket') || 
+			!(isset($headers['Connection']) && stristr($headers['Connection'], 'upgrade') !== false) || 
+			!isset($headers['Sec-WebSocket-Key']) || 
+			!(isset($headers['Sec-WebSocket-Version']) && $headers['Sec-WebSocket-Version'] == 13)
+		){
 			return 400;
+		}
 		
-		$upgrade  = "HTTP/1.1 101 Switching Protocols\r\n" .
+		$upgrade = "HTTP/1.1 101 Switching Protocols\r\n" .
 					"Upgrade: websocket\r\n" .
 					"Connection: Upgrade\r\n" .
 					"Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"].$this->GUID, true)) . "\r\n" .
 					"\r\n";
+
 		socket_write($user->socket,$upgrade,strlen($upgrade));
 		$user->handshake=true;
 		$user->route = $get;
 		if(isset($headers["Cookie"])){
 			$cookies = explode("; ", $headers["Cookie"]);
-			foreach($cookies as $cookie){
-				list($key, $value) = explode("=", $cookie);
-				$user->cookie[$key] = $value;
+			if($cookies){
+				foreach($cookies as $cookie){
+					list($key, $value) = explode("=", $cookie);
+					$user->cookie[$key] = $value;
+				}
 			}
 		}
 		
@@ -193,10 +205,10 @@ class WebSocket{
 		return true;
 	}
 
-	private function getUserBySocket($socket){
-		$found=null;
+	public function getUserByProperty($property = 'id', $value){
+		$found = false;
 		foreach($this->users as $user){
-			if($user->socket==$socket){
+			if($user->{$property} == $value && !$user->closed){
 				$found = $user;
 				break;
 			}
@@ -204,28 +216,7 @@ class WebSocket{
 		return $found;
 	}
 
-	public function getUserByID($id){
-		$found=false;
-		foreach($this->users as $user){
-			if($user->id==$id && !$user->closed){
-				$found = $user;
-				break;
-			}
-		}
-		return $found;
-	}
-	
-	public function getUsersByRoute($route){
-		$found=array();
-		foreach($this->users as $user){
-			if($user->route==$route && !$user->closed){
-				$found[] = $user;
-			}
-		}
-		return $found;
-	}
-
-	private function unframe($payload) {
+	public static function unframe($payload) {
 		$length = ord($payload[1]) & 127;
 		
 		if ($length == 126) {
@@ -247,7 +238,7 @@ class WebSocket{
 		return $text;
 	}
 
-	private function frame($text, $opcode = 0x1) {
+	public static function frame($text, $opcode = 0x1) {
 		// 0x1 text frame (FIN + opcode)
 		$b1 = 0x80 | ($opcode & 0x0f);
 		
