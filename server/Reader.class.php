@@ -19,7 +19,7 @@ class Reader extends \Worker {
 			} elseif($bytes === 'Nothing') {
 				continue;
 			} else {
-				if(!$this->user->handshake){
+				if(!$this->user->isAuthenticated()){
 					$handshake = $this->handshake($buffer);
 					if($handshake !== true){
 						$err = '';
@@ -122,7 +122,7 @@ class Reader extends \Worker {
 	}
 
 	private function disconnect(){
-		if($this->user->handshake && !$this->user->closed){
+		if($this->user->isAuthenticated() && !$this->user->closed){
 			$this->close("disconnect");
 		}
 	}

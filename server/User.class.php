@@ -19,7 +19,7 @@ class User {
 			return;
 
 		$payload = WebSocket::frame($payload, $opcode);
-		socket_write($this->socket, $payload, strlen($payload));
+		$this->write_raw($payload);
 	}
 
 	public function write_raw($payload){
@@ -38,5 +38,9 @@ class User {
 
 	public function close(){
 		socket_close($this->socket);
+	}
+
+	public function isAuthenticated(){
+		return $this->handshake;
 	}
 }
