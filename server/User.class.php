@@ -1,15 +1,16 @@
 <?php
-namespace Websocket;
+namespace WebSocket;
 
-class User {
+class User extends \Stackable {
 	public $id;
-	private $socket;
+	public $socket;
 	public $handshake = false;
 	public $closed = false;
 	public $channels = [];
 	public $cookie;
+	public $extensions = [];
 
-	public function __construct($socket){
+	public function __construct(&$socket){
 		$this->socket = $socket;
 	}
 
@@ -23,21 +24,51 @@ class User {
 	}
 
 	public function write_raw($payload){
-		socket_write($this->socket, $payload, strlen($payload));
+		fwrite($this->socket, $payload, strlen($payload));
 	}
 
-	public function read(&$buffer){
-		$changed = [$this->socket];
-		$write = NULL;
-		$except = NULL;
-		if(socket_select($changed,$write,$except,5) > 0) {
-			return @socket_recv($this->socket, $buffer, 2048, 0);
+	public function read(){
+		if(!is_resource($this->socket)){
+			echo "User #" . $this->id . " lost connection!";
+			return false;
 		}
-		return 'Nothing';
+
+		$remaining = 1;
+		$contents = '';
+
+		while($remaining > 0) {
+			if (feof($this->socket)) {
+				$this->close();
+				return $contents;
+			}
+			$read = fread($this->socket, $remaining);
+
+			if($read === false){
+				$this->close();
+				return $contents;
+			}
+
+			$contents .= $read;
+			$remaining -= strlen($read);
+
+			if (feof($this->socket)) {
+				$this->close();
+				return $contents;
+			}
+
+			$metadata = stream_get_meta_data($this->socket);
+			if ($metadata && isset($metadata['unread_bytes']) && $metadata['unread_bytes']) {
+				$remaining = $metadata['unread_bytes'];
+			}
+		}
+		return $contents;
 	}
 
 	public function close(){
-		socket_close($this->socket);
+		$this->closed = true;
+		if(is_resource($this->socket)) {
+			fclose($this->socket);
+		}
 	}
 
 	public function isAuthenticated(){

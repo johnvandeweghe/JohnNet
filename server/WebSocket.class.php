@@ -1,9 +1,9 @@
 <?php
-namespace Websocket;
+namespace WebSocket;
 
 //Attempts to implement RFC6455 http://datatracker.ietf.org/doc/rfc6455/?include_text=1
 class WebSocket{
-	private $master;
+	public $master;
 
 	private $users = [];
 
@@ -15,7 +15,7 @@ class WebSocket{
 
 	private $address, $port;
 
-	function __construct($address,$port){
+	function __construct($address, $port=443){
 		$this->address = $address;
 		$this->port = $port;
 	}
@@ -23,18 +23,29 @@ class WebSocket{
 	public function listen(){
 		ob_implicit_flush();
 
-		$this->master=socket_create(AF_INET, SOCK_STREAM, SOL_TCP)     or die("socket_create() failed");
-		socket_set_option($this->master, SOL_SOCKET, SO_REUSEADDR, 1)  or die("socket_option() failed");
-		socket_bind($this->master, $this->address, $this->port)                    or die("socket_bind() failed");
-		socket_listen($this->master,20)                                or die("socket_listen() failed");
-		echo "Listening on: " . $this->address . ":" . $this->port . "\n";
+		$ctx = stream_context_create(
+			array('ssl' =>
+				array(
+					"local_cert" => "cert.pem",
+					"allow_self_signed" => true,
+					"verify_peer" => false,
+				)
+			)
+		);
+
+		$this->master = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
+		if(!$this->master || !$ctx || $errno || $errstr){
+			exit('Failed to start! (Port already in use?');
+		}
+
+		echo "Listening on: wss://" . $this->address . ":" . $this->port . "\n";
 
 		while(true){
 			$changed = [$this->master];
 			$write = NULL;
 			$except = NULL;
-			if(socket_select($changed,$write,$except,5) > 0){
-				$client = socket_accept($this->master);
+			if(stream_select($changed, $write, $except, 5) > 0){
+				$client = stream_socket_accept($changed[0]);
 				if($client < 0){
 					continue;//socket accept failure
 				} else {
@@ -43,8 +54,8 @@ class WebSocket{
 					end($this->users);
 					$user->id = key($this->users);
 
-					$reader = new Reader($user, $this);
-					$writer = new Writer($user, $this);
+					$reader = new Reader($user);
+					$writer = new Writer($user);
 
 					$reader->start();
 					$writer->start();

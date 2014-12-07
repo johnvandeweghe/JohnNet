@@ -1,24 +1,22 @@
 <?php
-namespace Websocket;
+namespace WebSocket;
 
 class Reader extends \Worker {
 
-	private $user = null;
+	public $user = null;
+	private $buffer = '';
 
-	function __construct(User &$user, Websocket $ws){
+	function __construct(User &$user){
 		$this->user = $user;
-		$this->ws = $ws;
 	}
 
 	public function run(){
 		while(!$this->user->closed){
-			$buffer = null;
-			$bytes = $this->user->read($buffer);
-			if($bytes==0){
-				$this->disconnect();
-			} elseif($bytes === 'Nothing') {
-				continue;
+			$buffer = $this->user->read();
+			if($buffer === false) {
+				$this->close();
 			} else {
+				var_dump('authenticated', $this->user->isAuthenticated());
 				if(!$this->user->isAuthenticated()){
 					$handshake = $this->handshake($buffer);
 					if($handshake !== true){
@@ -29,16 +27,16 @@ class Reader extends \Worker {
 							$err = "HTTP/1.1 404 Not Found";
 						}
 						$this->user->write_raw($err);
-						$this->disconnect();
+						$this->close();
 					}
 				} else {
 					$opcode = ord($buffer[0]) & 15;
-					$data = Websocket::unframe($buffer);
+					$data = WebSocket::unframe($buffer);
 					if($opcode >= 0x8 && $opcode <= 0xF){
 						switch($opcode){
 							case 0x8: //Close
 								if($this->user->closed){
-									$this->disconnect();
+									$this->close();
 								} else {
 									$this->close($data);
 								}
@@ -53,21 +51,27 @@ class Reader extends \Worker {
 								break;
 						}
 					} else {
-						$payload = json_decode($data, true);
-						if($payload && isset($payload['channel']) && isset($payload['payload']) && $opcode === 0x1){
-							if($payload === 'subscribe'){
-								//onSubscribe($user, $channel);
-							} else {
-								//onPublish($user, $channel, $payload);
-							}
+						if($opcode === 0x0){
+							$this->buffer .= $data;
 						} else {
-							//invalid payload
+							$payload = json_decode($this->buffer . $data, true);
+							$this->buffer = '';
+
+							if($payload && isset($payload['channel']) && isset($payload['payload']) && $opcode === 0x1){
+								if($payload['payload'] === 'subscribe'){
+									echo "PAYASDJAIOKEGHNI";
+									//onSubscribe($user, $channel);
+								} else {
+									//onPublish($user, $channel, $payload);
+								}
+							} else {
+								//invalid payload
+							}
 						}
 					}
 				}
 			}
 		}
-		$this->user->close();
 	}
 
 	private function handshake($buffer){
@@ -88,6 +92,10 @@ class Reader extends \Worker {
 			!(isset($headers['Sec-WebSocket-Version']) && $headers['Sec-WebSocket-Version'] == 13)
 		){
 			return 400;
+		}
+
+		if(isset($headers['Sec-WebSocket-Extensions']) && $headers['Sec-WebSocket-Extensions']){
+			$this->user->extensions = explode('; ', $headers['Sec-WebSocket-Extensions']);
 		}
 
 		$upgrade = "HTTP/1.1 101 Switching Protocols\r\n" .
@@ -113,17 +121,13 @@ class Reader extends \Worker {
 	}
 
 	//Mark a user closed and send them $msg as the reason
-	private function close($msg, $force = false){
-		$this->user->closed = true;
-		$this->user->write($msg, 0x8);
+	private function close($msg = '', $force = false){
+		if($this->user->isAuthenticated() && !$this->user->closed) {
+			$this->user->write($msg, 0x8);
+		}
+		$this->user->close();
 		if(!$force){
 			//event
-		}
-	}
-
-	private function disconnect(){
-		if($this->user->isAuthenticated() && !$this->user->closed){
-			$this->close("disconnect");
 		}
 	}
 

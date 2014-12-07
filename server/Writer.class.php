@@ -1,13 +1,12 @@
 <?php
-namespace Websocket;
+namespace WebSocket;
 
-class Writeer extends \Worker {
+class Writer extends \Worker {
 
 	private $user = null;
 
-	function __construct(User &$user, Websocket $ws){
+	function __construct(User &$user){
 		$this->user = $user;
-		$this->ws = $ws;
 	}
 
 	public function run(){
