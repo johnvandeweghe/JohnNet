@@ -26,14 +26,13 @@ class WebSocket{
 		$ctx = stream_context_create(
 			array('ssl' =>
 				array(
-					"local_cert" => "C:/Users/John/Desktop/PubSub Host/server/cert.pem",
+					"local_cert" => "cert.pem",
 					"allow_self_signed" => true,
 					"verify_peer" => false,
 					"passphrase" => "",
 				)
 			)
 		);
-		var_dump(file_get_contents("C:/Users/John/Desktop/PubSub Host/server/cert.pem"));
 
 		$this->master = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
 		if(!$this->master || !$ctx || $errno || $errstr){
