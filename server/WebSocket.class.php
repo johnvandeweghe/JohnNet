@@ -27,8 +27,6 @@ class WebSocket{
 			array('ssl' =>
 				array(
 					"local_cert" => "cert.pem",
-					"allow_self_signed" => true,
-					"verify_peer" => false,
 				)
 			)
 		);

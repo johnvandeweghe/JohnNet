@@ -101,7 +101,7 @@ class Reader extends \Worker {
 		$upgrade = "HTTP/1.1 101 Switching Protocols\r\n" .
 					"Upgrade: websocket\r\n" .
 					"Connection: Upgrade\r\n" .
-					"Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"] . Websocket::GUID, true)) . "\r\n" .
+					"Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"] . WebSocket::GUID, true)) . "\r\n" .
 					"\r\n";
 
 		$this->user->write_raw($upgrade);
