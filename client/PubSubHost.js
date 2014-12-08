@@ -2,7 +2,7 @@ var PubSubHost = function(applicationID, apiKey){
 	this.applicationID = applicationID;
 	this.apiKey = apiKey;
 
-	var websocket = new WebSocket('wss://localhost:443');
+	var websocket = new WebSocket('wss://localhost:8080');
 
 	websocket.onopen = function(m){
 		console.log(m);
