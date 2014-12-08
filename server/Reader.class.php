@@ -15,8 +15,9 @@ class Reader extends \Worker {
 			$buffer = $this->user->read();
 			if($buffer === false) {
 				$this->close();
+			} elseif($buffer == '') {
+				continue;
 			} else {
-				var_dump('authenticated', $this->user->isAuthenticated());
 				if(!$this->user->isAuthenticated()){
 					$handshake = $this->handshake($buffer);
 					if($handshake !== true){
@@ -59,7 +60,7 @@ class Reader extends \Worker {
 
 							if($payload && isset($payload['channel']) && isset($payload['payload']) && $opcode === 0x1){
 								if($payload['payload'] === 'subscribe'){
-									echo "PAYASDJAIOKEGHNI";
+									echo "Subscribe request for channel: " . $payload['channel'] . "\n";
 									//onSubscribe($user, $channel);
 								} else {
 									//onPublish($user, $channel, $payload);

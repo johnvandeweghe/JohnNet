@@ -26,12 +26,13 @@ class WebSocket{
 		$ctx = stream_context_create(
 			array('ssl' =>
 				array(
-					"local_cert" => "cert.pem",
+					"local_cert" => "server.pem",
 					"allow_self_signed" => true,
 					"verify_peer" => false,
-					"passphrase" => "",
+					"passphrase" => "password",
 				)
-			)
+			),
+			array()
 		);
 
 		$this->master = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
@@ -41,29 +42,33 @@ class WebSocket{
 
 		echo "Listening on: wss://" . $this->address . ":" . $this->port . "\n";
 
-		while(true){
-			$changed = [$this->master];
-			$write = NULL;
-			$except = NULL;
-			if(stream_select($changed, $write, $except, 5) > 0){
-				$client = stream_socket_accept($changed[0]);
-				if($client < 0){
-					continue;//socket accept failure
-				} else {
-					$user = new User($client);
-					$this->users[] = $user;
-					end($this->users);
-					$user->id = key($this->users);
+		while(true) {
+			try {
+				$changed = [$this->master];
+				$write = NULL;
+				$except = NULL;
+				if (stream_select($changed, $write, $except, 5) > 0) {
+					$client = stream_socket_accept($changed[0], 0);
+					if ($client < 0) {
+						continue;//socket accept failure
+					} else {
+						$user = new User($client);
+						$this->users[] = &$user;
+						end($this->users);
+						$user->id = key($this->users);
 
-					$reader = new Reader($user);
-					$writer = new Writer($user);
+						$reader = new Reader($user);
+						$writer = new Writer($user);
 
-					$reader->start();
-					$writer->start();
+						$reader->start();
+						$writer->start();
 
-					$this->readers[] = $reader;
-					$this->writers[] = $writer;
+						$this->readers[] = &$reader;
+						$this->writers[] = &$writer;
+					}
 				}
+			} catch(\Exception $e){
+				var_dump($e);
 			}
 		}
 	}

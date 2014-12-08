@@ -8,6 +8,6 @@ if(PHP_SAPI == "cli"){
 	error_reporting(E_ALL);
 	set_time_limit(0);
 
-	$master = new WebSocket\WebSocket("localhost", 8080);
+	$master = new WebSocket\WebSocket("localhost", 443);
 	$master->listen();
 }

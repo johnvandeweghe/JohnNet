@@ -3,7 +3,7 @@ namespace WebSocket;
 
 class User extends \Stackable {
 	public $id;
-	public $socket;
+	private $socket;
 	public $handshake = false;
 	public $closed = false;
 	public $channels = [];
@@ -29,36 +29,49 @@ class User extends \Stackable {
 
 	public function read(){
 		if(!is_resource($this->socket)){
-			echo "User #" . $this->id . " lost connection!";
+			echo "User #" . $this->id . " lost connection!\n";
 			return false;
 		}
 
+		$firstRead = true;
 		$remaining = 1;
 		$contents = '';
 
-		while($remaining > 0) {
-			if (feof($this->socket)) {
-				$this->close();
-				return $contents;
-			}
-			$read = fread($this->socket, $remaining);
+		$changed = [$this->socket];
+		$write = NULL;
+		$except = NULL;
+		if (stream_select($changed, $write, $except, 5) > 0) {
+			while ($remaining > 0) {
+				if (feof($changed[0])) {
+					$this->close();
+					return $contents;
+				}
+				$read = fread($changed[0], $remaining);
 
-			if($read === false){
-				$this->close();
-				return $contents;
-			}
+				if ($read === false) {
+					$this->close();
+					return $contents;
+				}
 
-			$contents .= $read;
-			$remaining -= strlen($read);
+				$contents .= $read;
 
-			if (feof($this->socket)) {
-				$this->close();
-				return $contents;
-			}
+				//SSL bug, only can read 1 byte first read
+				if($firstRead && strlen($read) == 1){
+					$firstRead = false;
+					$remaining = 1400;
+				} else {
+					$remaining = 0;
+				}
 
-			$metadata = stream_get_meta_data($this->socket);
-			if ($metadata && isset($metadata['unread_bytes']) && $metadata['unread_bytes']) {
-				$remaining = $metadata['unread_bytes'];
+				if (feof($changed[0])) {
+					$this->close();
+					return $contents;
+				}
+
+				$metadata = stream_get_meta_data($changed[0]);
+				if ($metadata && isset($metadata['unread_bytes']) && $metadata['unread_bytes']) {
+					$remaining = $metadata['unread_bytes'];
+				}
 			}
 		}
 		return $contents;
