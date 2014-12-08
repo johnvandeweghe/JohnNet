@@ -18,7 +18,7 @@ class Reader extends \Worker {
 			} elseif($buffer == '') {
 				continue;
 			} else {
-				if(!$this->user->isAuthenticated()){
+				if(!$this->user->handshake){
 					$handshake = $this->handshake($buffer);
 					if($handshake !== true){
 						$err = '';
@@ -58,12 +58,61 @@ class Reader extends \Worker {
 							$payload = json_decode($this->buffer . $data, true);
 							$this->buffer = '';
 
-							if($payload && isset($payload['channel']) && isset($payload['payload']) && $opcode === 0x1){
-								if($payload['payload'] === 'subscribe'){
-									echo "Subscribe request for channel: " . $payload['channel'] . "\n";
-									//onSubscribe($user, $channel);
-								} else {
-									//onPublish($user, $channel, $payload);
+							if($payload && isset($payload['type']) && isset($payload['payload']) && $opcode === 0x1){
+								switch($payload['type']){
+									case 'register':
+										//Register user to application
+										if(!isset($payload['app_id']) || isset($payload['app_secret'])){
+											$this->user->write(json_encode([
+												'type' => 'register',
+												'payload' => [
+													'status' => 'failed',
+													'message' => 'Missing app id or app secret'
+												],
+											]));
+											break;
+										}
+										$application = Application::find($payload['app_id']);
+										if($application){
+											if($application->secret !== $payload['app_secret']){
+												$this->user->write(json_encode([
+													'type' => 'register',
+													'payload' => [
+														'status' => 'failed',
+														'message' => 'Incorrect secret (credential failure logged and reported)'
+													],
+												]));
+												break;
+											}
+											$this->user->register($application);
+										}
+										break;
+									case 'subscribe':
+										if($application = $this->user->registered()){
+
+										} else {
+											$this->user->write(json_encode([
+												'type' => 'subscribe',
+												'payload' => [
+													'status' => 'failed',
+													'message' => 'Not yet registered'
+												],
+											]));
+										}
+										break;
+									case 'publish':
+										if($application = $this->user->registered()){
+
+										} else {
+											$this->user->write(json_encode([
+												'type' => 'publish',
+												'payload' => [
+														'status' => 'failed',
+														'message' => 'Not yet registered'
+												],
+											]));
+										}
+										break;
 								}
 							} else {
 								//invalid payload
@@ -123,7 +172,8 @@ class Reader extends \Worker {
 
 	//Mark a user closed and send them $msg as the reason
 	private function close($msg = '', $force = false){
-		if($this->user->isAuthenticated() && !$this->user->closed) {
+		//If the conditions are right to send a message (handshake completed, not closed) send a close message
+		if($this->user->handshake && !$this->user->closed) {
 			$this->user->write($msg, 0x8);
 		}
 		$this->user->close();

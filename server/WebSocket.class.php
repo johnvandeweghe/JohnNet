@@ -11,6 +11,8 @@ class WebSocket{
 
 	private $writers = [];
 
+	private $server;
+
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 	private $address, $port;
@@ -41,6 +43,10 @@ class WebSocket{
 		}
 
 		echo "Listening on: wss://" . $this->address . ":" . $this->port . "\n";
+
+		$this->server = new \Server(['name' => gethostname()]);
+		$this->server->save();
+		register_shutdown_function([$this, 'shutdown']);
 
 		while(true) {
 			try {
@@ -111,5 +117,9 @@ class WebSocket{
 		else
 			$header = pack('CCN', $b1, 127, $length);
 		return $header . $text;
+	}
+
+	public function shutdown(){
+		$this->server->delete();
 	}
 }

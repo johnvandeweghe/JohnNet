@@ -9,6 +9,7 @@ class User extends \Stackable {
 	public $channels = [];
 	public $cookie;
 	public $extensions = [];
+	private $application;
 
 	public function __construct(&$socket){
 		$this->socket = $socket;
@@ -84,7 +85,12 @@ class User extends \Stackable {
 		}
 	}
 
-	public function isAuthenticated(){
-		return $this->handshake;
+	public function register(\Application $application){
+		$this->channels = [];
+		$this->application = $application;
+	}
+
+	public function registered(){
+		return $this->application;
 	}
 }

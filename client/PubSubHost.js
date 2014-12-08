@@ -1,6 +1,7 @@
-var PubSubHost = function(applicationID, apiKey){
-	this.applicationID = applicationID;
-	this.apiKey = apiKey;
+var PubSubHost = function(app_id, app_secret, debug){
+	this.app_id = app_id;
+	this.api_secret = app_secret;
+	this.debug = (typeof debug !== 'undefined') ? debug : true;
 
 	var websocket = new WebSocket('wss://localhost:8080');
 
