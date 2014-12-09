@@ -5,9 +5,13 @@ class Reader extends \Worker {
 
 	public $user = null;
 	private $buffer = '';
+	private $sqs;
 
 	function __construct(User &$user){
 		$this->user = $user;
+		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
+			'region'  => 'us-east-1'
+		));
 	}
 
 	public function run(){
@@ -89,7 +93,23 @@ class Reader extends \Worker {
 										break;
 									case 'subscribe':
 										if($application = $this->user->registered()){
-
+											if($this->user->subscribe($payload['payload']['channel'])) {
+												$this->user->write(json_encode([
+													'type' => 'subscribe',
+													'payload' => [
+														'status' => 'success',
+														'message' => 'Subscribed to channel'
+													],
+												]));
+											} else {
+												$this->user->write(json_encode([
+													'type' => 'subscribe',
+													'payload' => [
+														'status' => 'failed',
+														'message' => 'Access to channel denied'
+													],
+												]));
+											}
 										} else {
 											$this->user->write(json_encode([
 												'type' => 'subscribe',
@@ -102,7 +122,30 @@ class Reader extends \Worker {
 										break;
 									case 'publish':
 										if($application = $this->user->registered()){
-
+											if($sub = $this->user->isSubscribed($payload['payload']['channel'])){
+												$this->sqs->sendMessage([
+													'QueueUrl'    => SQS_QUEUE_PREFIX . 'channel-broadcast',
+													'MessageBody' => json_encode([
+														'channel' => $sub->channel->channel_id,
+														'payload' => $payload['payload']['payload']
+													]),
+												]);
+												$this->user->write(json_encode([
+													'type' => 'publish',
+													'payload' => [
+														'status' => 'success',
+														'message' => 'Payload published to channel'
+													],
+												]));
+											} else {
+												$this->user->write(json_encode([
+													'type' => 'publish',
+													'payload' => [
+														'status' => 'failed',
+														'message' => 'Not subscribed to channel'
+													],
+												]));
+											}
 										} else {
 											$this->user->write(json_encode([
 												'type' => 'publish',

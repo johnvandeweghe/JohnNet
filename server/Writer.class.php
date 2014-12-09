@@ -7,9 +7,28 @@ class Writer extends \Worker {
 
 	function __construct(User &$user){
 		$this->user = $user;
+		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
+			'region'  => 'us-east-1'
+		));
 	}
 
 	public function run(){
-		//Pull messages from SQS for this user and write them to them
+		while(!$this->user->closed) {
+			$result = $this->client->receiveMessage(array(
+				'QueueUrl' => SQS_QUEUE_PREFIX . 'websocket-user-broadcast-' . $this->user->arUser->id,
+				'WaitTimeSeconds' => 20,
+				'MaxNumberOfMessages' => 10,
+			));
+
+			if ($messages = $result->get('Messages')) {
+				foreach ($messages as $message) {
+					$payload = json_decode($message['Body'], true);
+
+					//Verification?
+
+					$this->user->write(json_encode($payload));
+				}
+			}
+		}
 	}
 }

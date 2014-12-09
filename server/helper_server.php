@@ -14,22 +14,10 @@ if(PHP_SAPI == "cli"){
 	{
 		$cfg->set_model_directory('models');
 		$cfg->set_connections(array(
-			'development' => MYSQL_CONNECTION_STRING
+				'development' => MYSQL_CONNECTION_STRING
 		));
 	});
 
-	$master = new WebSocket\WebSocket("localhost", 8080);
-	$master->listen();
+	$master = new WebSocket\WebSocketHelper();
+	$master->start();
 }
-
-/*
- * TODO
- * Longpolling support (old clients
- * HTTP RESTFUL API (server clients)
- * webhooks
- *
- *
- * Low priority (could do after Kipsu integration):
- * Front end UI to create applications/register webhooks?
- * compression WS extension support
- */

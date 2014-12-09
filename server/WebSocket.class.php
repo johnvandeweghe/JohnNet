@@ -46,6 +46,7 @@ class WebSocket{
 
 		$this->server = new \Server(['name' => gethostname()]);
 		$this->server->save();
+		define('WEBSOCKET_SERVER_ID', $this->server->id);
 		register_shutdown_function([$this, 'shutdown']);
 
 		while(true) {
