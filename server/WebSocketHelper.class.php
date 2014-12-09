@@ -7,6 +7,8 @@ class WebSocketHelper {
 
 	public function __construct(){
 		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
+			'key' => AWS_ACCESS_KEY_ID,
+			'secret' => AWS_SECRET_ACCESS_KEY,
 			'region'  => 'us-east-1'
 		));
 	}
@@ -15,7 +17,7 @@ class WebSocketHelper {
 	public function start(){
 		echo "Starting up WebSocket Helper\n";
 		while(true){
-			$result = $this->client->receiveMessage(array(
+			$result = $this->sqs->receiveMessage(array(
 				'QueueUrl'        => SQS_QUEUE_PREFIX . 'websocket-channel-broadcast',
 				'WaitTimeSeconds' => 20,
 				'MaxNumberOfMessages' => 10,

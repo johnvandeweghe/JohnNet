@@ -60,9 +60,6 @@ class WebSocket{
 						continue;//socket accept failure
 					} else {
 						$user = new User($client);
-						$this->users[] = &$user;
-						end($this->users);
-						$user->id = key($this->users);
 
 						$reader = new Reader($user);
 						$writer = new Writer($user);
@@ -72,6 +69,7 @@ class WebSocket{
 
 						$this->readers[] = &$reader;
 						$this->writers[] = &$writer;
+						$this->users[] = &$user;
 					}
 				}
 			} catch(\Exception $e){

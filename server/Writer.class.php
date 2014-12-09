@@ -3,19 +3,30 @@ namespace WebSocket;
 
 class Writer extends \Worker {
 
-	private $user = null;
+	private $user;
+	private $sqs;
 
 	function __construct(User &$user){
 		$this->user = $user;
 		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
+			'key' => AWS_ACCESS_KEY_ID,
+			'secret' => AWS_SECRET_ACCESS_KEY,
 			'region'  => 'us-east-1'
 		));
 	}
 
 	public function run(){
+		while(!$this->user->closed){
+			if($this->user->registered()){
+				$this->sqs->createQueue(array('QueueName' => 'websocket-user-broadcast-' . $this->user->id));
+				break;
+			}
+			sleep(1);
+		}
+
 		while(!$this->user->closed) {
-			$result = $this->client->receiveMessage(array(
-				'QueueUrl' => SQS_QUEUE_PREFIX . 'websocket-user-broadcast-' . $this->user->arUser->id,
+			$result = $this->sqs->receiveMessage(array(
+				'QueueUrl' => SQS_QUEUE_PREFIX . 'websocket-user-broadcast-' . $this->user->id,
 				'WaitTimeSeconds' => 20,
 				'MaxNumberOfMessages' => 10,
 			));

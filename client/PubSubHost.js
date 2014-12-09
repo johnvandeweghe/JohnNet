@@ -6,7 +6,7 @@ var PubSubHost = function(app_id, app_secret, debug){
 	var websocket = new WebSocket('wss://localhost:8080');
 
 	websocket.onopen = function(m){
-		console.log(m);
+
 	};
 
 	websocket.onmessage = function(payload){
@@ -21,9 +21,13 @@ var PubSubHost = function(app_id, app_secret, debug){
 		console.log(m);
 	};
 
+	this.register = function(){
+		var obj = {'type': 'register', 'payload': {app_id: this.app_id, app_secret: this.app_secret}};
+		websocket.send(JSON.stringify(obj));
+	};
 
 	this.subscribe = function(channel){
-		var obj = {'channel': channel, 'payload': 'subscribe'};
+		var obj = {'type': 'subscribe', 'payload': {'channel': channel}};
 		websocket.send(JSON.stringify(obj));
 	};
 

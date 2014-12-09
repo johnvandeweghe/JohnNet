@@ -3,13 +3,15 @@ namespace WebSocket;
 
 class Reader extends \Worker {
 
-	public $user = null;
+	public $user;
 	private $buffer = '';
 	private $sqs;
 
 	function __construct(User &$user){
 		$this->user = $user;
 		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
+			'key' => AWS_ACCESS_KEY_ID,
+			'secret' => AWS_SECRET_ACCESS_KEY,
 			'region'  => 'us-east-1'
 		));
 	}
@@ -66,7 +68,7 @@ class Reader extends \Worker {
 								switch($payload['type']){
 									case 'register':
 										//Register user to application
-										if(!isset($payload['app_id']) || isset($payload['app_secret'])){
+										if(!isset($payload['payload']['app_id']) || isset($payload['payload']['app_secret'])){
 											$this->user->write(json_encode([
 												'type' => 'register',
 												'payload' => [
@@ -76,20 +78,27 @@ class Reader extends \Worker {
 											]));
 											break;
 										}
-										$application = Application::find($payload['app_id']);
+										$application = \Application::find($payload['payload']['app_id']);
 										if($application){
-											if($application->secret !== $payload['app_secret']){
+											if($application->secret === $payload['payload']['app_secret']) {
+												$this->user->register($application);
 												$this->user->write(json_encode([
 													'type' => 'register',
 													'payload' => [
-														'status' => 'failed',
-														'message' => 'Incorrect secret (credential failure logged and reported)'
+														'status' => 'success',
+														'message' => 'Registered'
 													],
 												]));
 												break;
 											}
-											$this->user->register($application);
 										}
+										$this->user->write(json_encode([
+											'type' => 'register',
+											'payload' => [
+												'status' => 'failed',
+												'message' => 'Incorrect credentials (credential failure logged and reported)'
+											],
+										]));
 										break;
 									case 'subscribe':
 										if($application = $this->user->registered()){

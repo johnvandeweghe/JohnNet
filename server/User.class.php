@@ -10,13 +10,14 @@ class User extends \Stackable {
 	public $cookie;
 	public $extensions = [];
 	private $application;
-	public $arUser = [];
 
 	public function __construct(&$socket){
 		$this->socket = $socket;
-		$this->arUser = new \User([
+		$arUser = new \User([
 			'server_id' => WEBSOCKET_SERVER_ID,
 		]);
+		$arUser->save();
+		$this->id = $arUser->id;
 	}
 
 	//Send a message to a specific user, $opcode corresponds to the RFC opcodes (1=text, 2=binary)
@@ -87,14 +88,14 @@ class User extends \Stackable {
 		if(is_resource($this->socket)) {
 			fclose($this->socket);
 		}
-		if($this->arUser){
-			$this->arUser->delete();
+		if($arUser = \User::find($this->id)){
+			$arUser->delete();
 		}
 	}
 
 	public function register(\Application $application){
-		foreach($this->subscriptions as $sub){
-			if($sub){
+		foreach($this->subscriptions as $sub_id){
+			if($sub = \Subscription::find($sub_id)){
 				try {
 					$sub->delete();
 				} catch(Exception $e){
@@ -122,23 +123,24 @@ class User extends \Stackable {
 		}
 
 		$sub = null;
-		if(!($sub = \Subscription::find_by_user_id_and_channel_id($this->arUser->id, $ch->id))){
+		if(!($sub = \Subscription::find_by_user_id_and_channel_id($this->id, $ch->id))){
 			$sub = new \Subscription([
-				'user_id' => $this->arUser->id,
+				'user_id' => $this->id,
 				'channel_id' => $ch->id
 			]);
 			$sub->save();
 		}
 
-		$this->subscriptions[] = $sub;
+		$this->subscriptions[] = $sub->id;
 
 		//False to deny access
 		return true;
 	}
 
 	public function isSubscribed($channel){
-		foreach($this->subscriptions as $sub){
-			if($sub->channel->name === $channel){
+		foreach($this->subscriptions as $sub_id){
+			$sub = \Subscription::find($sub_id);
+			if($sub && $sub->channel->name === $channel){
 				return $sub;
 			}
 		}
