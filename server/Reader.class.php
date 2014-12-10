@@ -7,6 +7,8 @@ class Reader extends \Worker {
 	private $buffer = '';
 	private $sqs;
 
+	private $db;
+
 	function __construct(User &$user){
 		$this->user = $user;
 		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
@@ -17,6 +19,7 @@ class Reader extends \Worker {
 	}
 
 	public function run(){
+
 		while(!$this->user->closed){
 			$buffer = $this->user->read();
 			if($buffer === false) {
@@ -49,7 +52,7 @@ class Reader extends \Worker {
 								}
 								break;
 							case 0x9: //Ping
-								$this->user->write($data, 0XA);
+								$this->user->write($data, 0xA);
 								break;
 							case 0xA: //Pong
 								break;
@@ -78,20 +81,20 @@ class Reader extends \Worker {
 											]));
 											break;
 										}
-										$application = \Application::find($payload['payload']['app_id']);
-										if($application){
-											if($application->secret === $payload['payload']['app_secret']) {
-												$this->user->register($application);
-												$this->user->write(json_encode([
-													'type' => 'register',
-													'payload' => [
-														'status' => 'success',
-														'message' => 'Registered'
-													],
-												]));
-												break;
-											}
+
+										$this->db = new PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
+
+										if($this->user->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $this->db)) {
+											$this->user->write(json_encode([
+												'type' => 'register',
+												'payload' => [
+													'status' => 'success',
+													'message' => 'Registered'
+												],
+											]));
+											break;
 										}
+
 										$this->user->write(json_encode([
 											'type' => 'register',
 											'payload' => [

@@ -1,6 +1,5 @@
 {
 	"require": {
-		"aws/aws-sdk-php": "2.*",
-		"php-activerecord/php-activerecord": "dev-master"
+		"aws/aws-sdk-php": "2.*"
 	}
 }

@@ -18,6 +18,13 @@ class Writer extends \Worker {
 	public function run(){
 		while(!$this->user->closed){
 			if($this->user->registered()){
+				\ActiveRecord\Config::initialize(function($cfg)
+				{
+					$cfg->set_model_directory('models');
+					$cfg->set_connections(array(
+							'development' => MYSQL_CONNECTION_STRING
+					));
+				});
 				$this->sqs->createQueue(array('QueueName' => 'websocket-user-broadcast-' . $this->user->id));
 				break;
 			}

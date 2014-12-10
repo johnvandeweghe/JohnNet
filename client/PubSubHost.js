@@ -22,7 +22,7 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	this.register = function(){
-		var obj = {'type': 'register', 'payload': {app_id: this.app_id, app_secret: this.app_secret}};
+		var obj = {'type': 'register', 'payload': {'app_id': this.app_id, 'app_secret': this.app_secret}};
 		websocket.send(JSON.stringify(obj));
 	};
 

@@ -2,7 +2,7 @@
 namespace WebSocket;
 
 class User extends \Stackable {
-	public $id;
+	public $id = 0;
 	private $socket;
 	public $handshake = false;
 	public $closed = false;
@@ -13,11 +13,6 @@ class User extends \Stackable {
 
 	public function __construct(&$socket){
 		$this->socket = $socket;
-		$arUser = new \User([
-			'server_id' => WEBSOCKET_SERVER_ID,
-		]);
-		$arUser->save();
-		$this->id = $arUser->id;
 	}
 
 	//Send a message to a specific user, $opcode corresponds to the RFC opcodes (1=text, 2=binary)
@@ -25,11 +20,13 @@ class User extends \Stackable {
 		if(!$this->handshake)
 			return;
 
+
 		$payload = WebSocket::frame($payload, $opcode);
 		$this->write_raw($payload);
 	}
 
 	public function write_raw($payload){
+		var_dump($payload);
 		fwrite($this->socket, $payload, strlen($payload));
 	}
 
@@ -83,29 +80,38 @@ class User extends \Stackable {
 		return $contents;
 	}
 
-	public function close(){
+	public function close($db = false){
 		$this->closed = true;
 		if(is_resource($this->socket)) {
 			fclose($this->socket);
 		}
-		if($arUser = \User::find($this->id)){
-			$arUser->delete();
+		if($this->id && $db){
+			$u = new \WebSocket\Models\User($db, $this->id);
+			$u->delete();
 		}
 	}
 
-	public function register(\Application $application){
-		foreach($this->subscriptions as $sub_id){
-			if($sub = \Subscription::find($sub_id)){
+	public function register($app_id, $app_secret, &$db){
+		try {
+			$application = new \WebSocket\Models\Application($db, $app_id);
+		} catch(\Exception $e){
+			return false;
+		}
+		if($application->secret === $app_secret) {
+			foreach ($this->subscriptions as $sub_id) {
 				try {
+					$sub = new \WebSocket\Models\Subscription($db, $sub_id);
 					$sub->delete();
-				} catch(Exception $e){
+				} catch (Exception $e) {
 					//Subscription removed previously (channel lost?)
 				}
 			}
-
+			$this->subscriptions = [];
+			$this->application = $application->id;
+			return true;
+		} else {
+			return false;
 		}
-		$this->subscriptions = [];
-		$this->application = $application;
 	}
 
 	public function registered(){

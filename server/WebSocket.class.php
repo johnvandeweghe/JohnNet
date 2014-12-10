@@ -17,9 +17,13 @@ class WebSocket{
 
 	private $address, $port;
 
+	private $db;
+
 	function __construct($address, $port=443){
 		$this->address = $address;
 		$this->port = $port;
+
+		$this->db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
 	}
 
 	public function listen(){
@@ -44,8 +48,7 @@ class WebSocket{
 
 		echo "Listening on: wss://" . $this->address . ":" . $this->port . "\n";
 
-		$this->server = new \Server(['name' => gethostname()]);
-		$this->server->save();
+		$this->server = new \WebSocket\Models\Server($this->db, ['name' => gethostname()]);
 		define('WEBSOCKET_SERVER_ID', $this->server->id);
 		register_shutdown_function([$this, 'shutdown']);
 
