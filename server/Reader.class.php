@@ -7,8 +7,6 @@ class Reader extends \Worker {
 	private $buffer = '';
 	private $sqs;
 
-	private $db;
-
 	function __construct(User &$user){
 		$this->user = $user;
 		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
@@ -19,6 +17,8 @@ class Reader extends \Worker {
 	}
 
 	public function run(){
+
+		$db = false;
 
 		while(!$this->user->closed){
 			$buffer = $this->user->read();
@@ -68,23 +68,28 @@ class Reader extends \Worker {
 							$this->buffer = '';
 
 							if($payload && isset($payload['type']) && isset($payload['payload']) && $opcode === 0x1){
-								switch($payload['type']){
+								switch($payload['type']) {
 									case 'register':
 										//Register user to application
-										if(!isset($payload['payload']['app_id']) || isset($payload['payload']['app_secret'])){
+										if (!isset($payload['payload']['app_id']) || !isset($payload['payload']['app_secret'])) {
 											$this->user->write(json_encode([
-												'type' => 'register',
-												'payload' => [
-													'status' => 'failed',
-													'message' => 'Missing app id or app secret'
-												],
+													'type' => 'register',
+													'payload' => [
+															'status' => 'failed',
+															'message' => 'Missing app id or app secret'
+													],
 											]));
 											break;
 										}
 
-										$this->db = new PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
+										try {
+											$db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
+											$db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+										} catch(\PDOException $e){
+											var_dump($e);
+										}
 
-										if($this->user->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $this->db)) {
+										if($this->user->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $db)) {
 											$this->user->write(json_encode([
 												'type' => 'register',
 												'payload' => [

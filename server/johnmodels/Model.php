@@ -2,9 +2,10 @@
 
 namespace WebSocket\Models;
 
-abstract class Model {
+abstract class Model{
 
-	protected $fieldNames = [];
+	protected $fieldNames = '[]';
+
 	protected $tableName = '';
 
 	protected $db;
@@ -25,7 +26,7 @@ abstract class Model {
 				$this->reload();
 			}
 			foreach($data as $key=>$value){
-				if($key !== 'id' && in_array($key, $this->fieldNames)){
+				if($key !== 'id' && in_array($key, $this->getFieldNames())){
 					$this->{$key} = $value;
 				}
 			}
@@ -44,10 +45,10 @@ abstract class Model {
 	}
 
 	public function reload(){
-		$statement = $this->db->prepare("select `" . implode('`, `', $this->fieldNames) . "` from " . $this->tableName . " where `id` = :id");
+		$statement = $this->db->prepare("select `" . implode('`, `', $this->getFieldNames()) . "` from `" . $this->tableName . "` where `id` = :id");
 		$statement->execute(array(':id' => (int)$this->id));
 		if($row = $statement->fetch(\PDO::FETCH_ASSOC)){
-			foreach($this->fieldnames as $field){
+			foreach($this->getFieldNames() as $field){
 				$this->{$field} = $row[$field];
 			}
 		} else {
@@ -57,7 +58,7 @@ abstract class Model {
 	public function save(){
 		$set = [];
 		$bindings = [];
-		foreach($this->fieldNames as $type => $fieldName){
+		foreach($this->getFieldNames() as $type => $fieldName){
 			if($fieldName != 'id') {
 				$set[] = "`$fieldName`= :$fieldName";
 			}
@@ -67,7 +68,7 @@ abstract class Model {
 		if($this->id){
 			$statement = $this->db->prepare("UPDATE " . $this->tableName . " SET " . implode(',', $set) . " where `id` = :id");
 		} else {
-			$statement = $this->db->prepare("INSERT INTO " . $this->tableName . " (`" . implode('`, `', $this->fieldNames) . "`) VALUES (:" . implode(',:', $this->fieldNames) . ")");
+			$statement = $this->db->prepare("INSERT INTO " . $this->tableName . " (`" . implode('`, `', $this->getFieldNames()) . "`) VALUES (:" . implode(',:', $this->getFieldNames()) . ")");
 		}
 		$statement->execute($bindings);
 		if(!$this->id){
@@ -78,5 +79,9 @@ abstract class Model {
 	public function delete(){
 		$statement = $this->db->prepare("DELETE FROM " . $this->tableName . " where `id` = :id");
 		$statement->execute(array(':id' => (int)$this->id));
+	}
+
+	private function getFieldNames(){
+		return json_decode($this->fieldNames, true);
 	}
 }

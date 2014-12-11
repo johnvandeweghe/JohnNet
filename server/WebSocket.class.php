@@ -26,8 +26,12 @@ class WebSocket{
 		$this->db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
 	}
 
-	public function listen(){
+	public function live($threads = 4, $node){
 		ob_implicit_flush();
+
+		//Create pool of $threads writers and readers
+
+		//Make a client connection to $node (if set), add to writer/reader threads 0
 
 		$ctx = stream_context_create(
 			array('ssl' =>
@@ -48,9 +52,6 @@ class WebSocket{
 
 		echo "Listening on: wss://" . $this->address . ":" . $this->port . "\n";
 
-		$this->server = new \WebSocket\Models\Server($this->db, ['name' => gethostname()]);
-		define('WEBSOCKET_SERVER_ID', $this->server->id);
-		register_shutdown_function([$this, 'shutdown']);
 
 		while(true) {
 			try {
@@ -59,6 +60,7 @@ class WebSocket{
 				$except = NULL;
 				if (stream_select($changed, $write, $except, 5) > 0) {
 					$client = stream_socket_accept($changed[0], 0);
+					//add to existing pools created above
 					if ($client < 0) {
 						continue;//socket accept failure
 					} else {
@@ -119,9 +121,5 @@ class WebSocket{
 		else
 			$header = pack('CCN', $b1, 127, $length);
 		return $header . $text;
-	}
-
-	public function shutdown(){
-		$this->server->delete();
 	}
 }

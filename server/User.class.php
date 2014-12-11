@@ -2,7 +2,6 @@
 namespace WebSocket;
 
 class User extends \Stackable {
-	public $id = 0;
 	private $socket;
 	public $handshake = false;
 	public $closed = false;
@@ -10,6 +9,8 @@ class User extends \Stackable {
 	public $cookie;
 	public $extensions = [];
 	private $application;
+
+	public $sqs;
 
 	public function __construct(&$socket){
 		$this->socket = $socket;
@@ -20,13 +21,11 @@ class User extends \Stackable {
 		if(!$this->handshake)
 			return;
 
-
 		$payload = WebSocket::frame($payload, $opcode);
 		$this->write_raw($payload);
 	}
 
 	public function write_raw($payload){
-		var_dump($payload);
 		fwrite($this->socket, $payload, strlen($payload));
 	}
 
@@ -94,7 +93,9 @@ class User extends \Stackable {
 	public function register($app_id, $app_secret, &$db){
 		try {
 			$application = new \WebSocket\Models\Application($db, $app_id);
+			var_dump($application);
 		} catch(\Exception $e){
+			var_dump($e);
 			return false;
 		}
 		if($application->secret === $app_secret) {
