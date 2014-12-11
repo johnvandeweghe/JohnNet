@@ -1,7 +1,7 @@
 <?php
-namespace WebSocket;
+namespace JohnNet;
 
-class Reader extends \Worker {
+class ConnectionHandler extends \Worker {
 
 	public $user;
 	private $buffer = '';
@@ -9,11 +9,6 @@ class Reader extends \Worker {
 
 	function __construct(User &$user){
 		$this->user = $user;
-		$this->sqs = \Aws\Sqs\SqsClient::factory(array(
-			'key' => AWS_ACCESS_KEY_ID,
-			'secret' => AWS_SECRET_ACCESS_KEY,
-			'region'  => 'us-east-1'
-		));
 	}
 
 	public function run(){
@@ -82,12 +77,6 @@ class Reader extends \Worker {
 											break;
 										}
 
-										try {
-											$db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
-											$db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-										} catch(\PDOException $e){
-											var_dump($e);
-										}
 
 										if($this->user->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $db)) {
 											$this->user->write(json_encode([

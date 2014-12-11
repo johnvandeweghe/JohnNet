@@ -1,5 +1,5 @@
 <?php
-namespace WebSocket;
+namespace JohnNet;
 
 class User extends \Stackable {
 	private $socket;

@@ -1,8 +1,8 @@
 <?php
-namespace WebSocket;
+namespace JohnNet;
 
 //Attempts to implement RFC6455 http://datatracker.ietf.org/doc/rfc6455/?include_text=1
-class WebSocket{
+class Server {
 	public $master;
 
 	private $users = [];
@@ -66,7 +66,7 @@ class WebSocket{
 					} else {
 						$user = new User($client);
 
-						$reader = new Reader($user);
+						$reader = new ConnectionHandler($user);
 						$writer = new Writer($user);
 
 						$reader->start();
