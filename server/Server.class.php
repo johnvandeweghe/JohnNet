@@ -7,11 +7,7 @@ class Server {
 
 	private $users = [];
 
-	private $readers = [];
-
-	private $writers = [];
-
-	private $server;
+	private $connectionHandlers = [];
 
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -26,12 +22,16 @@ class Server {
 		$this->db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
 	}
 
-	public function live($threads = 4, $node){
+	public function live($threads = 4, $node = ''){
 		ob_implicit_flush();
 
-		//Create pool of $threads writers and readers
+		for($i = 0; $i < $threads; $i++){
+			$handler = new ConnectionHandler();
+			$handler->start();
+			$this->connectionHandlers[] = $handler;
+		}
 
-		//Make a client connection to $node (if set), add to writer/reader threads 0
+		if($node != 'init')
 
 		$ctx = stream_context_create(
 			array('ssl' =>
@@ -122,4 +122,6 @@ class Server {
 			$header = pack('CCN', $b1, 127, $length);
 		return $header . $text;
 	}
+
+	public
 }
