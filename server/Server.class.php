@@ -22,7 +22,7 @@ class Server {
 		$this->db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
 	}
 
-	public function live($threads = 4, $node = ''){
+	public function live($threads = 4, $nodeAddress = ''){
 		ob_implicit_flush();
 
 		for($i = 0; $i < $threads; $i++){
@@ -30,8 +30,6 @@ class Server {
 			$handler->start();
 			$this->connectionHandlers[] = $handler;
 		}
-
-		if($node != 'init')
 
 		$ctx = stream_context_create(
 			array('ssl' =>
@@ -44,6 +42,34 @@ class Server {
 			),
 			array()
 		);
+
+		if($nodeAddress) {
+			$node = stream_socket_client('tls://' . $nodeAddress, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
+			if(!$node || !$ctx || $errno || $errstr){
+				exit('Failed to connect to node at ' . $nodeAddress);
+			}
+
+			if(!fwrite($node, 'connect ' . $this->key)){
+				exit('Unable to write to node');
+			}
+
+			$buffer = '';
+
+			if(!($result = fread($node, 1))){
+				exit("Unable to read first byte from node");
+			} else {
+				$buffer .= $result;
+			}
+
+			if(!($result = fread($node, 8192))){
+				exit("Unable to read node bytes");
+			} else {
+				$buffer .= $result;
+			}
+
+			//Process results (should be list of servers to connect to)
+			if($)
+		}
 
 		$this->master = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
 		if(!$this->master || !$ctx || $errno || $errstr){
@@ -122,6 +148,4 @@ class Server {
 			$header = pack('CCN', $b1, 127, $length);
 		return $header . $text;
 	}
-
-	public
 }

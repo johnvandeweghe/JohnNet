@@ -3,12 +3,10 @@ namespace JohnNet;
 
 class ConnectionHandler extends \Worker {
 
-	public $user;
 	private $buffer = '';
 	private $sqs;
 
-	function __construct(User &$user){
-		$this->user = $user;
+	function __construct(){
 	}
 
 	public function run(){
