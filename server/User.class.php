@@ -29,55 +29,7 @@ class User extends \Stackable {
 		fwrite($this->socket, $payload, strlen($payload));
 	}
 
-	public function read(){
-		if(!is_resource($this->socket)){
-			echo "User #" . $this->id . " lost connection!\n";
-			return false;
-		}
 
-		$firstRead = true;
-		$remaining = 1;
-		$contents = '';
-
-		$changed = [$this->socket];
-		$write = NULL;
-		$except = NULL;
-		if (stream_select($changed, $write, $except, 5) > 0) {
-			while ($remaining > 0) {
-				if (feof($changed[0])) {
-					$this->close();
-					return $contents;
-				}
-				$read = fread($changed[0], $remaining);
-
-				if ($read === false) {
-					$this->close();
-					return $contents;
-				}
-
-				$contents .= $read;
-
-				//SSL bug, only can read 1 byte first read
-				if($firstRead && strlen($read) == 1){
-					$firstRead = false;
-					$remaining = 1400;
-				} else {
-					$remaining = 0;
-				}
-
-				if (feof($changed[0])) {
-					$this->close();
-					return $contents;
-				}
-
-				$metadata = stream_get_meta_data($changed[0]);
-				if ($metadata && isset($metadata['unread_bytes']) && $metadata['unread_bytes']) {
-					$remaining = $metadata['unread_bytes'];
-				}
-			}
-		}
-		return $contents;
-	}
 
 	public function close($db = false){
 		$this->closed = true;

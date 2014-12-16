@@ -22,10 +22,10 @@ class Server {
 		$this->db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
 	}
 
-	public function live($threads = 4, $nodeAddress = ''){
+	public function live($clientThreads = 4, $nodeAddress = ''){
 		ob_implicit_flush();
 
-		for($i = 0; $i < $threads; $i++){
+		for($i = 0; $i < $clientThreads; $i++){
 			$handler = new ConnectionHandler();
 			$handler->start();
 			$this->connectionHandlers[] = $handler;
@@ -44,29 +44,15 @@ class Server {
 		);
 
 		if($nodeAddress) {
-			$node = stream_socket_client('tls://' . $nodeAddress, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
-			if(!$node || !$ctx || $errno || $errstr){
-				exit('Failed to connect to node at ' . $nodeAddress);
-			}
-
-			if(!fwrite($node, $this->key)){
-				exit('Unable to write to node');
-			}
-
-			$response = self::readOnce($node);
-
-			//Process results (should be list of servers to connect to)
-			if(!($servers = json_decode($response, true))){
-				exit('Received invalid response from node');
-			}
+			$this->makeFriends($nodeAddress);
 		}
 
-		$this->master = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
-		if(!$this->master || !$ctx || $errno || $errstr){
-			exit('Failed to start! (Port already in use?');
+		$this->listeners[] = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
+		if(!$this->$this->listeners[0] || !$ctx || $errno || $errstr){
+			exit('I tried to move in, but I think someone else was already living there? (Check the port)');
 		}
 
-		echo "Listening on: wss://" . $this->address . ":" . $this->port . "\n";
+		echo "I moved into my new address at: wss://" . $this->address . ":" . $this->port . "\n";
 
 
 		while(true) {
@@ -121,11 +107,12 @@ class Server {
 		return $text;
 	}
 
-	public static function frame($text, $opcode = 0x1) {
+	public static function frame($text, $opcode = 0x1)
+	{
 		// 0x1 text frame (FIN + opcode)
 		$b1 = 0x80 | ($opcode & 0x0f);
 
-		if($opcode == 0x8)
+		if ($opcode == 0x8)
 			$text = pack('n', 1000) . $text;
 
 		$length = strlen($text);
@@ -139,21 +126,48 @@ class Server {
 		return $header . $text;
 	}
 
-	public static function readOnce($stream){
-		$buffer = '';
-
-		if(!($result = fread($stream, 1))){
-			exit("Unable to read first byte from node");
-		} else {
-			$buffer .= $result;
+	public function makeFriends($nodeAddress){
+		$node = stream_socket_client('tls://' . $nodeAddress, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
+		if(!$node || !$ctx || $errno || $errstr){
+			exit('Are you sure this address is someone who wants to make friends? ' . $nodeAddress);
 		}
 
-		if(!($result = fread($stream, 8192))){
-			exit("Unable to read node bytes");
-		} else {
-			$buffer .= $result;
+		$node = new ServerConnection($node);
+
+		if(!$node->writeRaw($this->key)){
+			exit('I couldn\'t get a hold of the person you wanted to introduce me to, something about fwrite failing...?');
 		}
 
-		return $buffer;
+		if(!($response = $node->readOnce())){
+			exit('I couldn\'t get a hold of the person you wanted to introduce me to, something about fread failing...?');
+		}
+
+		//Process results (should be list of servers to connect to)
+		if(!($servers = json_decode($response, true))){
+			exit('I couldn\'t make friends today, are you sure you introduced me correctly?');
+		}
+
+		$this->connectionHandlers[0]->connections[] = $node;
+
+		foreach($servers as $server){
+			$node = stream_socket_client('tls://' . $server, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
+			if(!$node || !$ctx || $errno || $errstr){
+				exit('I met the friend you introduced me to, but their other friend wasn\'t interested in me. :( ' . $nodeAddress);
+			}
+
+			$node = new ServerConnection($node);
+
+			if(!$node->writeRaw($this->key)){
+				exit('I couldn\'t get a hold of the person you wanted to introduce me to, something about fwrite failing...?');
+			}
+
+			if(!($response = $node->readOnce())){
+				exit('I couldn\'t get a hold of the person you wanted to introduce me to, something about fread failing...?');
+			}
+
+			$this->connectionHandlers[0]->connections[] = $node;
+		}
+
+		echo "Successfully made " . count($this->connectionHandlers[0]->connections) . " friends";
 	}
 }
