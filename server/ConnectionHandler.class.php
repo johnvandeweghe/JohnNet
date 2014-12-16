@@ -6,8 +6,11 @@ class ConnectionHandler extends \Worker {
 	private $buffer = '';
 	protected $connections;
 
-	function __construct(){
+	protected $application_secrets;
+
+	function __construct($application_secrets){
 		$this->connections = new Connections();
+		$this->application_secrets = $application_secrets;
 	}
 
 	public function run(){

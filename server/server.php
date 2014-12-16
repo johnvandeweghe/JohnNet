@@ -8,7 +8,7 @@ if(PHP_SAPI == "cli"){
 	error_reporting(E_ALL);
 	set_time_limit(0);
 
-	$master = new JohnNet\Server("localhost", 8080);
+	$master = new JohnNet\Server("localhost", 8080, $application_secrets);
 	$master->live($argv[1]);
 }
 

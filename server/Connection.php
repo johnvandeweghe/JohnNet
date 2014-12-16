@@ -12,16 +12,6 @@ abstract class Connection extends \Stackable {
         $this->socket = $socket;
     }
 
-    //Send a message to a specific WebSocket connection, $opcode corresponds to the RFC opcodes (1=text, 2=binary)
-    public function writeWS($payload, $opcode=0x1){
-        if(!$this->isReady()) {
-            return;
-        }
-
-        $payload = WebSocket::frame($payload, $opcode);
-        return $this->writeRaw($payload);
-    }
-
     public function writeRaw($payload){
         return fwrite($this->socket, $payload, strlen($payload));
     }

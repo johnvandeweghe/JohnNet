@@ -13,20 +13,19 @@ class Server {
 
 	private $address, $port;
 
-	private $db;
+	private $application_secrets;
 
-	function __construct($address, $port=443){
+	function __construct($address, $port=443, $application_secrets=false){
 		$this->address = $address;
 		$this->port = $port;
-
-		$this->db = new \PDO(MYSQL_CONNECTION_STRING, MYSQL_USERNAME, MYSQL_PASSWORD);
+		$this->application_secrets = $application_secrets;
 	}
 
 	public function live($clientThreads = 4, $nodeAddress = ''){
 		ob_implicit_flush();
 
 		for($i = 0; $i < $clientThreads; $i++){
-			$handler = new ConnectionHandler();
+			$handler = new ConnectionHandler($this->application_secrets);
 			$handler->start();
 			$this->connectionHandlers[] = $handler;
 		}
@@ -57,7 +56,7 @@ class Server {
 
 		while(true) {
 			try {
-				$changed = [$this->master];
+				$changed = $this->listeners;
 				$write = NULL;
 				$except = NULL;
 				if (stream_select($changed, $write, $except, 5) > 0) {
@@ -168,6 +167,6 @@ class Server {
 			$this->connectionHandlers[0]->connections[] = $node;
 		}
 
-		echo "Successfully made " . count($this->connectionHandlers[0]->connections) . " friends";
+		echo "Successfully made " . count($this->connectionHandlers[0]->connections) . " friends\n";
 	}
 }

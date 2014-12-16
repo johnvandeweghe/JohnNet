@@ -9,16 +9,20 @@ class ClientConnection extends Connection {
 
     private $isHandshake = false;
 
+    public $subscriptions;
+    public $applicationID;
+
     //WARNING!!!!!
     //Using this currently WILL DEFINITELY SEGFAULT
     //Needs to be wrapped into a stackable, once the time comes to use it
     private $cookie = [];
 
     public function __construct(&$socket){
+        $this->subscriptions = new \Stackable();
         parent::__construct($socket);
     }
 
-    public function handleRead($buffer){
+    public function handleRead(&$handler, $buffer){
         if(!$this->isHandshake){
             $handshake = $this->handshake($buffer);
             if($handshake !== true){
@@ -60,93 +64,65 @@ class ClientConnection extends Connection {
                             case 'register':
                                 //Register user to application
                                 if (!isset($payload['payload']['app_id']) || !isset($payload['payload']['app_secret'])) {
-                                    $this->writeWS(json_encode([
-                                        'type' => 'register',
-                                        'payload' => [
-                                            'status' => 'failed',
-                                            'message' => 'Missing app id or app secret'
-                                        ],
-                                    ]));
-                                    break;
-                                }
-
-
-                                if($this->register($payload['payload']['app_id'], $payload['payload']['app_secret'])) {
-                                    $this->writeWS(json_encode([
-                                        'type' => 'register',
-                                        'payload' => [
-                                            'status' => 'success',
-                                            'message' => 'Registered'
-                                        ],
-                                    ]));
-                                    break;
-                                }
-
-                                $this->writeWS(json_encode([
-                                    'type' => 'register',
-                                    'payload' => [
+                                    $this->writePayload('register', [
                                         'status' => 'failed',
-                                        'message' => 'Incorrect credentials (credential failure logged and reported)'
-                                    ],
-                                ]));
+                                        'message' => 'Missing app id or app secret'
+                                    ]);
+                                    break;
+                                }
+
+
+                                if($this->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $handler)) {
+                                    $this->writePayload('register', [
+                                        'status' => 'success',
+                                        'message' => 'Registered'
+                                    ]);
+                                    break;
+                                }
+                                $this->writePayload('register', [
+                                    'status' => 'failed',
+                                    'message' => 'Incorrect credentials (credential failure logged and reported)'
+                                ]);
                                 break;
                             case 'subscribe':
                                 if($this->isReady()){
                                     if($this->subscribe($payload['payload']['channel'])) {
-                                        $this->writeWS(json_encode([
-                                            'type' => 'subscribe',
-                                            'payload' => [
-                                                'status' => 'success',
-                                                'message' => 'Subscribed to channel'
-                                            ],
-                                        ]));
+                                        $this->writePayload('subscribe', [
+                                            'status' => 'success',
+                                            'message' => 'Subscribed to channel'
+                                        ]);
                                     } else {
-                                        $this->writeWS(json_encode([
-                                            'type' => 'subscribe',
-                                            'payload' => [
-                                                'status' => 'failed',
-                                                'message' => 'Access to channel denied'
-                                            ],
-                                        ]));
+                                        $this->writePayload('subscribe', [
+                                            'status' => 'failed',
+                                            'message' => 'Access to channel denied'
+                                        ]);
                                     }
                                 } else {
-                                    $this->writeWS(json_encode([
-                                        'type' => 'subscribe',
-                                        'payload' => [
-                                            'status' => 'failed',
-                                            'message' => 'Not yet registered'
-                                        ],
-                                    ]));
+                                    $this->writePayload('subscribe', [
+                                        'status' => 'failed',
+                                        'message' => 'Not yet registered'
+                                    ]);
                                 }
                                 break;
                             case 'publish':
                                 if($this->isReady()){
                                     if($sub = $this->isSubscribed($payload['payload']['channel'])){
                                         $this->publish($payload['payload']['channel'], $payload['payload']);
-                                        $this->writeWS(json_encode([
-                                            'type' => 'publish',
-                                            'payload' => [
-                                                'status' => 'success',
-                                                'message' => 'Payload published to channel'
-                                            ],
-                                        ]));
+                                        $this->writePayload('publish', [
+                                            'status' => 'success',
+                                            'message' => 'Payload published to channel'
+                                        ]);
                                     } else {
-                                        $this->writeWS(json_encode([
-                                            'type' => 'publish',
-                                            'payload' => [
-                                                'status' => 'failed',
-                                                'message' => 'Not subscribed to channel'
-                                            ],
-                                        ]));
+                                        $this->writePayload('publish', [
+                                            'status' => 'failed',
+                                            'message' => 'Not subscribed to channel'
+                                        ]);
                                     }
                                 } else {
-                                    $this->writeWS(json_encode([
-                                        'type' => 'publish',
-                                        'payload' => [
-                                            'status' => 'failed',
-                                            'message' => 'Not yet registered'
-                                        ],
-                                    ]));
+                                    $this->writePayload('publish', [
+                                        'status' => 'failed',
+                                        'message' => 'Not yet registered'
+                                    ]);
                                 }
                                 break;
                         }
@@ -217,28 +193,32 @@ class ClientConnection extends Connection {
         return parent::isReady() && $this->isHandshake && $this->isRegistered;
     }
 
-    public function register($app_id, $app_secret, &$db){
-        try {
-            $application = new \WebSocket\Models\Application($db, $app_id);
-            var_dump($application);
-        } catch(\Exception $e){
-            var_dump($e);
-            return false;
-        }
-        if($application->secret === $app_secret) {
-            foreach ($this->subscriptions as $sub_id) {
-                try {
-                    $sub = new \WebSocket\Models\Subscription($db, $sub_id);
-                    $sub->delete();
-                } catch (Exception $e) {
-                    //Subscription removed previously (channel lost?)
-                }
-            }
-            $this->subscriptions = [];
-            $this->application = $application->id;
+    public function register($app_id, $app_secret, &$handler){
+
+        if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id]->secret === $app_secret) {
+            $this->subscriptions = new \Stackable();
+            $this->applicationID = $app_id;
+            $this->isRegistered = true;
             return true;
         } else {
             return false;
         }
+    }
+
+    public function writePayload($type, $payload){
+        return $this->writeWS(json_encode([
+            'type' => $type,
+            'payload' => $payload
+        ]));
+    }
+
+    //Send a message to a specific WebSocket connection, $opcode corresponds to the RFC opcodes (1=text, 2=binary)
+    public function writeWS($payload, $opcode=0x1){
+        if(!$this->isReady()) {
+            return;
+        }
+
+        $payload = Server::frame($payload, $opcode);
+        return $this->writeRaw($payload);
     }
 }
