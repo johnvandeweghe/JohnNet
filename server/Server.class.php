@@ -3,7 +3,7 @@ namespace JohnNet;
 
 //Attempts to implement RFC6455 http://datatracker.ietf.org/doc/rfc6455/?include_text=1
 class Server {
-	public $master;
+	public $listeners = [];
 
 	private $users = [];
 
@@ -49,26 +49,16 @@ class Server {
 				exit('Failed to connect to node at ' . $nodeAddress);
 			}
 
-			if(!fwrite($node, 'connect ' . $this->key)){
+			if(!fwrite($node, $this->key)){
 				exit('Unable to write to node');
 			}
 
-			$buffer = '';
-
-			if(!($result = fread($node, 1))){
-				exit("Unable to read first byte from node");
-			} else {
-				$buffer .= $result;
-			}
-
-			if(!($result = fread($node, 8192))){
-				exit("Unable to read node bytes");
-			} else {
-				$buffer .= $result;
-			}
+			$response = self::readOnce($node);
 
 			//Process results (should be list of servers to connect to)
-			if($)
+			if(!($servers = json_decode($response, true))){
+				exit('Received invalid response from node');
+			}
 		}
 
 		$this->master = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
@@ -147,5 +137,23 @@ class Server {
 		else
 			$header = pack('CCN', $b1, 127, $length);
 		return $header . $text;
+	}
+
+	public static function readOnce($stream){
+		$buffer = '';
+
+		if(!($result = fread($stream, 1))){
+			exit("Unable to read first byte from node");
+		} else {
+			$buffer .= $result;
+		}
+
+		if(!($result = fread($stream, 8192))){
+			exit("Unable to read node bytes");
+		} else {
+			$buffer .= $result;
+		}
+
+		return $buffer;
 	}
 }
