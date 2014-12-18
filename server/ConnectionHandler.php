@@ -1,18 +1,18 @@
 <?php
 namespace JohnNet;
 
-class ConnectionHandler extends \Worker {
+class ConnectionHandler extends \Thread {
 
-	protected $connections;
+	public $connections;
 
-	protected $application_secrets;
+	public $application_secrets;
 
 	private $id;
 
-	function __construct($id, &$connections, $application_secrets){
+	function __construct($id, $application_secrets){
 		$this->id = $id;
-		$this->connections = $connections;
 		$this->application_secrets = $application_secrets;
+		$this->connections = [];
 	}
 
 	public function run(){
@@ -27,30 +27,31 @@ class ConnectionHandler extends \Worker {
 
 	public function read(){
 
-		$sockets = $this->connections->getAllSockets();
+		$sockets = $this->getAllSockets();
 
 		echo "Found " . count($sockets) . " sockets\n";
 
 		$livingSockets = [];
 
-		foreach($sockets as &$socket){
+		foreach($sockets as $socket){
 			if(!is_resource($socket)){
-				$this->connections->findBySocket($socket)->close();
+				$connection = $this->findBySocket($socket);
+				$connection->close();
+				$this->remove($connection);
+				echo "Close 1\n";
 			} else {
-				$livingSockets[] = $socket;
+				$livingSockets[] = &$socket;
 			}
 		}
 
-		$sockets = $livingSockets;
-
-		//echo "Reduced to " . count($sockets) . " open sockets\n";
+		echo "Reduced to " . count($livingSockets) . " open sockets\n";
 
 		$write = NULL;
 		$except = NULL;
-		if ($sockets && stream_select($sockets, $write, $except, 5) > 0) {
-			echo "Select found data in " . count($sockets) . " sockets\n";
-			foreach($sockets as &$socket){
-				$connection = $this->connections->findBySocket($socket);
+		if ($sockets && stream_select($livingSockets, $write, $except, 5) > 0) {
+			echo "Select found data in " . count($livingSockets) . " sockets\n";
+			foreach($livingSockets as $c=>$socket){
+				$connection = $this->connections[$c];
 
 				$firstRead = true;
 				$remaining = 1;
@@ -59,13 +60,17 @@ class ConnectionHandler extends \Worker {
 				while ($remaining > 0) {
 					if (feof($socket)) {
 						$connection->close();
-						$connection->handleRead($contents);
+						echo "Close 2\n";
+						$connection->handleRead($this, $contents);
+						$this->remove($connection);
 					}
 					$read = fread($socket, $remaining);
 
 					if ($read === false) {
 						$connection->close();
-						$connection->handleRead($contents);
+						echo "Close 3\n";
+						$connection->handleRead($this, $contents);
+						$this->remove($connection);
 					}
 
 					$contents .= $read;
@@ -80,7 +85,9 @@ class ConnectionHandler extends \Worker {
 
 					if (feof($socket)) {
 						$connection->close();
-						$connection->handleRead($contents);
+						echo "Close 4\n";
+						$connection->handleRead($this, $contents);
+						$this->remove($connection);
 					}
 
 					$metadata = stream_get_meta_data($socket);
@@ -88,7 +95,8 @@ class ConnectionHandler extends \Worker {
 						$remaining = $metadata['unread_bytes'];
 					}
 				}
-				$connection->handleRead($contents);
+
+				$connection->handleRead($this, $contents);
 			}
 		} else {
 			return false;
@@ -98,5 +106,35 @@ class ConnectionHandler extends \Worker {
 	}
 
 
+//	public function findBySocket(&$socket){
+//		foreach($this->connections as &$connection){
+//			if($connection->socket == $socket){
+//				return $connection;
+//			}
+//		}
+//
+//		return false;
+//	}
+
+
+	public function remove($conn){
+		$connections = [];
+		foreach($this->connections as &$connection){
+			if($connection != $conn){
+				$connections[] = &$connection;
+			}
+		}
+		$this->connections = $connections;
+	}
+
+	public function getAllSockets(){
+		return $this->connections ? array_map(function(&$c){return $c->socket;}, $this->connections) : [];
+	}
+
+	public function add(&$connection){
+		$connections = $this->connections;
+		$connections[] = &$connection;
+		$this->connections = $connections;
+	}
 
 }

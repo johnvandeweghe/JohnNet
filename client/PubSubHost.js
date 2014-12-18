@@ -3,7 +3,7 @@ var PubSubHost = function(app_id, app_secret, debug){
 	this.app_secret = app_secret;
 	this.debug = (typeof debug !== 'undefined') ? debug : true;
 
-	var websocket = new WebSocket('wss://localhost:8080');
+	var websocket = new WebSocket('ws://localhost:8080');
 
 	websocket.onopen = function(m){
 

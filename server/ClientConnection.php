@@ -3,26 +3,22 @@ namespace JohnNet;
 
 class ClientConnection extends Connection {
 
-    private $buffer = '';
+    public $buffer = '';
 
-    private $isRegistered = false;
+    public $isRegistered = false;
 
-    private $isHandshake = false;
+    public $isHandshake = false;
 
-    public $subscriptions;
+    public $subscriptions = [];
     public $applicationID;
 
-    //WARNING!!!!!
-    //Using this currently WILL DEFINITELY SEGFAULT
-    //Needs to be wrapped into a stackable, once the time comes to use it
-    private $cookie = [];
+    public $cookie = [];
 
     public function __construct(&$socket){
-        $this->subscriptions = new \Stackable();
         parent::__construct($socket);
     }
 
-    public function handleRead(&$handler, $buffer){
+    public function handleRead($handler, $buffer){
         if(!$this->isHandshake){
             $handshake = $this->handshake($buffer);
             if($handshake !== true){
@@ -134,10 +130,10 @@ class ClientConnection extends Connection {
         }
     }
 
-    private function handshake($buffer){
+    public function handshake($buffer){
         $temp = explode("\r\n", str_replace("\r\n\r\n", "", $buffer));
 
-        //$get = str_replace(array("GET "," HTTP/1.1"), "", array_shift($temp));
+        $get = str_replace(array("GET "," HTTP/1.1"), "", array_shift($temp));
 
         $headers = array();
         foreach($temp as $header){
@@ -166,6 +162,7 @@ class ClientConnection extends Connection {
 
         $this->writeRaw($upgrade);
         $this->isHandshake = true;
+        $this->ready();
 
         if(isset($headers["Cookie"])){
             $cookies = explode("; ", $headers["Cookie"]);
@@ -182,6 +179,7 @@ class ClientConnection extends Connection {
 
     //Mark a user closed and send them $msg as the reason
     public function close($msg = ''){
+        var_dump('CLOSED', $msg);
         //If the conditions are right to send a message (handshake completed, not closed) send a close message
         if($this->isHandshake && !$this->closed) {
             $this->user->write($msg, 0x8);
@@ -190,13 +188,12 @@ class ClientConnection extends Connection {
     }
 
     public function isReady(){
-        return parent::isReady() && $this->isHandshake && $this->isRegistered;
+        return parent::isReady() && $this->isHandshake;
     }
 
-    public function register($app_id, $app_secret, &$handler){
-
-        if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id]->secret === $app_secret) {
-            $this->subscriptions = new \Stackable();
+    public function register($app_id, $app_secret, $handler){
+        if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id] === $app_secret) {
+            //$this->subscriptions = new \Stackable();
             $this->applicationID = $app_id;
             $this->isRegistered = true;
             return true;

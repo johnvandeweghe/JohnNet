@@ -5,11 +5,8 @@ namespace JohnNet;
 class Server {
 	public $listeners = [];
 
-	private $users = [];
-
 	private $connectionHandlers = [];
 
-	private $connectionss = [];
 	private $connections = [];
 
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -29,11 +26,9 @@ class Server {
 		ob_implicit_flush();
 
 		for($i = 0; $i < $clientThreads; $i++){
-			$connectionss = new Connections();
-			$handler = new ConnectionHandler($i, $connectionss, $this->application_secrets);
+			$handler = new ConnectionHandler($i, $this->application_secrets);
 			$handler->start();
 			$this->connectionHandlers[] = $handler;
-			$this->connectionss[] = $connectionss;
 		}
 
 		$ctx = stream_context_create(
@@ -49,10 +44,10 @@ class Server {
 		);
 
 		if($nodeAddress) {
-			$this->makeFriends($nodeAddress);
+			$this->makeFriends($nodeAddress, $ctx);
 		}
 
-		$this->listeners[] = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
+		$this->listeners[] = stream_socket_server('tcp://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
 		if(!$this->listeners[0] || !$ctx || $errno || $errstr){
 			exit('I tried to move in, but I think someone else was already living there? (Check the port)');
 		}
@@ -76,13 +71,11 @@ class Server {
 						} else {
 							echo "Connection made, connecting to threads...\n";
 							$connection = new ClientConnection($client);
-							echo "Connection object created...\n";
-
 							$this->connections[] = &$connection;
-
 							//TODO actual logic for load balancing
-							$this->connectionHandlers[0]->connections->add($connection);
+							$this->connectionHandlers[0]->add($connection);
 							echo "Connections object appended...\n";
+							echo "Connections this object appended...\n";
 						}
 					}
 				}
@@ -133,7 +126,7 @@ class Server {
 		return $header . $text;
 	}
 
-	public function makeFriends($nodeAddress){
+	public function makeFriends($nodeAddress, $ctx){
 		$node = stream_socket_client('tls://' . $nodeAddress, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
 		if(!$node || !$ctx || $errno || $errstr){
 			exit('Are you sure this address is someone who wants to make friends? ' . $nodeAddress);

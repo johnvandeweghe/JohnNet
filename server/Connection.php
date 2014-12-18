@@ -5,8 +5,8 @@ namespace JohnNet;
 abstract class Connection extends \Stackable {
     public $socket;
 
-    private $ready = false;
-    protected $closed = false;
+    public $ready = false;
+    public $closed = false;
 
     public function __construct(&$socket){
         $this->socket = $socket;
