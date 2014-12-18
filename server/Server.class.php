@@ -9,7 +9,11 @@ class Server {
 
 	private $connectionHandlers = [];
 
+	private $connectionss = [];
+	private $connections = [];
+
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+	const key = "jhiybURTSDD&@o82ty@G*6gug28y2oihouKHKYgkgig2ugpqpz";
 
 	private $address, $port;
 
@@ -25,9 +29,11 @@ class Server {
 		ob_implicit_flush();
 
 		for($i = 0; $i < $clientThreads; $i++){
-			$handler = new ConnectionHandler($this->application_secrets);
+			$connectionss = new Connections();
+			$handler = new ConnectionHandler($i, $connectionss, $this->application_secrets);
 			$handler->start();
 			$this->connectionHandlers[] = $handler;
+			$this->connectionss[] = $connectionss;
 		}
 
 		$ctx = stream_context_create(
@@ -47,11 +53,13 @@ class Server {
 		}
 
 		$this->listeners[] = stream_socket_server('tls://' . $this->address . ':' . $this->port, $errno, $errstr, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $ctx);
-		if(!$this->$this->listeners[0] || !$ctx || $errno || $errstr){
+		if(!$this->listeners[0] || !$ctx || $errno || $errstr){
 			exit('I tried to move in, but I think someone else was already living there? (Check the port)');
 		}
 
 		echo "I moved into my new address at: wss://" . $this->address . ":" . $this->port . "\n";
+
+		//TODO start server listener
 
 
 		while(true) {
@@ -60,22 +68,22 @@ class Server {
 				$write = NULL;
 				$except = NULL;
 				if (stream_select($changed, $write, $except, 5) > 0) {
-					$client = stream_socket_accept($changed[0], 0);
-					//add to existing pools created above
-					if ($client < 0) {
-						continue;//socket accept failure
-					} else {
-						$user = new User($client);
+					foreach($changed as &$socket) {
+						//TODO switch on server/client socket
+						$client = stream_socket_accept($socket, 0);
+						if ($client < 0) {
+							continue;//socket accept failure
+						} else {
+							echo "Connection made, connecting to threads...\n";
+							$connection = new ClientConnection($client);
+							echo "Connection object created...\n";
 
-						$reader = new ConnectionHandler($user);
-						$writer = new Writer($user);
+							$this->connections[] = &$connection;
 
-						$reader->start();
-						$writer->start();
-
-						$this->readers[] = &$reader;
-						$this->writers[] = &$writer;
-						$this->users[] = &$user;
+							//TODO actual logic for load balancing
+							$this->connectionHandlers[0]->connections->add($connection);
+							echo "Connections object appended...\n";
+						}
 					}
 				}
 			} catch(\Exception $e){

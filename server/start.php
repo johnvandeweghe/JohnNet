@@ -2,14 +2,18 @@
 if(PHP_SAPI == "cli"){
 	require_once("Server.class.php");
 	require_once("User.class.php");
-	require_once("ConnectionHandler.class.php");
+	require_once("ConnectionHandler.php");
+	require_once("Connection.php");
+	require_once("Connections.php");
+	require_once("ClientConnection.php");
+	require_once("ServerConnection.php");
 	require_once("config.php");
 
 	error_reporting(E_ALL);
 	set_time_limit(0);
 
 	$master = new JohnNet\Server("localhost", 8080, $application_secrets);
-	$master->live($argv[1]);
+	$master->live(1, isset($argv[1]) ? $argv[1] : '');
 }
 
 /*

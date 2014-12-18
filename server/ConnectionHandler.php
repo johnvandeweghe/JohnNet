@@ -3,26 +3,23 @@ namespace JohnNet;
 
 class ConnectionHandler extends \Worker {
 
-	private $buffer = '';
 	protected $connections;
 
 	protected $application_secrets;
 
-	function __construct($application_secrets){
-		$this->connections = new Connections();
+	private $id;
+
+	function __construct($id, &$connections, $application_secrets){
+		$this->id = $id;
+		$this->connections = $connections;
 		$this->application_secrets = $application_secrets;
 	}
 
 	public function run(){
-
 		while(true){
-			$buffer = $this->user->read();
-			if($buffer === false) {
-				$this->close();
-			} elseif($buffer == '') {
-				continue;
-			} else {
-				$this->read();
+			echo "thread #". $this->id . " is running!\n";
+			if(!$this->read()){
+				sleep(3);
 			}
 		}
 	}
@@ -31,6 +28,8 @@ class ConnectionHandler extends \Worker {
 	public function read(){
 
 		$sockets = $this->connections->getAllSockets();
+
+		echo "Found " . count($sockets) . " sockets\n";
 
 		$livingSockets = [];
 
@@ -44,9 +43,12 @@ class ConnectionHandler extends \Worker {
 
 		$sockets = $livingSockets;
 
+		//echo "Reduced to " . count($sockets) . " open sockets\n";
+
 		$write = NULL;
 		$except = NULL;
-		if (stream_select($sockets, $write, $except, 5) > 0) {
+		if ($sockets && stream_select($sockets, $write, $except, 5) > 0) {
+			echo "Select found data in " . count($sockets) . " sockets\n";
 			foreach($sockets as &$socket){
 				$connection = $this->connections->findBySocket($socket);
 
@@ -88,7 +90,11 @@ class ConnectionHandler extends \Worker {
 				}
 				$connection->handleRead($contents);
 			}
+		} else {
+			return false;
 		}
+
+		return true;
 	}
 
 
