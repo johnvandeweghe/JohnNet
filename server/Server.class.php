@@ -26,7 +26,9 @@ class Server {
 		ob_implicit_flush();
 
 		for($i = 0; $i < $clientThreads; $i++){
-			$handler = new ConnectionHandler($i, $this->application_secrets);
+			$connections = new \Stackable();
+			$this->connections[] = $connections;
+			$handler = new ConnectionHandler($i, $connections, $this->application_secrets);
 			$handler->start();
 			$this->connectionHandlers[] = $handler;
 		}
@@ -69,13 +71,10 @@ class Server {
 						if ($client < 0) {
 							continue;//socket accept failure
 						} else {
-							echo "Connection made, connecting to threads...\n";
 							$connection = new ClientConnection($client);
-							$this->connections[] = &$connection;
+							$this->connections[] = $connection;
 							//TODO actual logic for load balancing
 							$this->connectionHandlers[0]->add($connection);
-							echo "Connections object appended...\n";
-							echo "Connections this object appended...\n";
 						}
 					}
 				}

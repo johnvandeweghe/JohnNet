@@ -9,10 +9,10 @@ class ConnectionHandler extends \Thread {
 
 	private $id;
 
-	function __construct($id, $application_secrets){
+	function __construct($id, $connections, $application_secrets){
 		$this->id = $id;
 		$this->application_secrets = $application_secrets;
-		$this->connections = [];
+		$this->connections = $connections;
 	}
 
 	public function run(){
@@ -51,7 +51,10 @@ class ConnectionHandler extends \Thread {
 		if ($sockets && stream_select($livingSockets, $write, $except, 5) > 0) {
 			echo "Select found data in " . count($livingSockets) . " sockets\n";
 			foreach($livingSockets as $c=>$socket){
+				var_dump($socket);
 				$connection = $this->connections[$c];
+				//Cheap hack for a bug I don't understand
+				$connection->socket = $socket;
 
 				$firstRead = true;
 				$remaining = 1;
@@ -61,16 +64,16 @@ class ConnectionHandler extends \Thread {
 					if (feof($socket)) {
 						$connection->close();
 						echo "Close 2\n";
-						$connection->handleRead($this, $contents);
 						$this->remove($connection);
+						continue 2;
 					}
 					$read = fread($socket, $remaining);
 
 					if ($read === false) {
 						$connection->close();
 						echo "Close 3\n";
-						$connection->handleRead($this, $contents);
 						$this->remove($connection);
+						continue 2;
 					}
 
 					$contents .= $read;
@@ -86,8 +89,8 @@ class ConnectionHandler extends \Thread {
 					if (feof($socket)) {
 						$connection->close();
 						echo "Close 4\n";
-						$connection->handleRead($this, $contents);
 						$this->remove($connection);
+						continue 2;
 					}
 
 					$metadata = stream_get_meta_data($socket);
@@ -125,16 +128,22 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 		$this->connections = $connections;
+		var_dump(count($this->connections));
 	}
 
 	public function getAllSockets(){
-		return $this->connections ? array_map(function(&$c){return $c->socket;}, $this->connections) : [];
+		$return = [];
+		foreach($this->connections as $connection){
+			$return[] = $connection->socket;
+		}
+		return $return;
 	}
 
-	public function add(&$connection){
-		$connections = $this->connections;
-		$connections[] = &$connection;
-		$this->connections = $connections;
+	public function add($connection){
+//		echo "Added client\n";
+//		$connections = $this->connections;
+//		$connections[] = $connection;
+		$this->connections[] = $connection;
 	}
 
 }

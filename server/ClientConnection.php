@@ -182,7 +182,7 @@ class ClientConnection extends Connection {
         var_dump('CLOSED', $msg);
         //If the conditions are right to send a message (handshake completed, not closed) send a close message
         if($this->isHandshake && !$this->closed) {
-            $this->user->write($msg, 0x8);
+            $this->writeWS($msg, 0x8);
         }
         parent::close();
     }
