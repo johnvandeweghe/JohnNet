@@ -51,10 +51,10 @@ class ConnectionHandler extends \Thread {
 		if ($sockets && stream_select($livingSockets, $write, $except, 5) > 0) {
 			echo "Select found data in " . count($livingSockets) . " sockets\n";
 			foreach($livingSockets as $c=>$socket){
-				var_dump($socket);
-				$connection = $this->connections[$c];
-				//Cheap hack for a bug I don't understand
-				$connection->socket = $socket;
+				$connection = $this->findBySocket($socket);
+				if(!$connection){
+					throw new \Exception('Couldnt find socket: ' . $socket);
+				}
 
 				$firstRead = true;
 				$remaining = 1;
@@ -109,15 +109,15 @@ class ConnectionHandler extends \Thread {
 	}
 
 
-//	public function findBySocket(&$socket){
-//		foreach($this->connections as &$connection){
-//			if($connection->socket == $socket){
-//				return $connection;
-//			}
-//		}
-//
-//		return false;
-//	}
+	public function findBySocket(&$socket){
+		foreach($this->connections as &$connection){
+			if($connection->socket == $socket){
+				return $connection;
+			}
+		}
+
+		return false;
+	}
 
 
 	public function remove($conn){
@@ -128,14 +128,16 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 		$this->connections = $connections;
-		var_dump(count($this->connections));
 	}
 
 	public function getAllSockets(){
 		$return = [];
-		foreach($this->connections as $connection){
+		$connections = $this->connections->chunk(count($this->connections), true);
+		var_dump($connections);
+		foreach($connections as $connection){
 			$return[] = $connection->socket;
 		}
+		var_dump($return);
 		return $return;
 	}
 

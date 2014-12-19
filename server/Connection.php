@@ -13,7 +13,6 @@ abstract class Connection extends \Stackable {
     }
 
     public function writeRaw($payload){
-        var_dump($this->socket);
         return fwrite($this->socket, $payload, strlen($payload));
     }
 
