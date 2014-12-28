@@ -9,7 +9,7 @@ class ConnectionHandler extends \Thread {
 
 	private $id;
 
-	function __construct($id, $connections, $application_secrets){
+	function __construct($id, &$connections, $application_secrets){
 		$this->id = $id;
 		$this->application_secrets = $application_secrets;
 		$this->connections = $connections;
@@ -108,44 +108,8 @@ class ConnectionHandler extends \Thread {
 		return true;
 	}
 
-
-	public function findBySocket(&$socket){
-		foreach($this->connections as &$connection){
-			if($connection->socket == $socket){
-				return $connection;
-			}
-		}
-
-		return false;
-	}
-
-
-	public function remove($conn){
-		$connections = [];
-		foreach($this->connections as &$connection){
-			if($connection != $conn){
-				$connections[] = &$connection;
-			}
-		}
-		$this->connections = $connections;
-	}
-
 	public function getAllSockets(){
-		$return = [];
-		$connections = $this->connections->chunk(count($this->connections), true);
-		var_dump($connections);
-		foreach($connections as $connection){
-			$return[] = $connection->socket;
-		}
-		var_dump($return);
-		return $return;
-	}
-
-	public function add($connection){
-//		echo "Added client\n";
-//		$connections = $this->connections;
-//		$connections[] = $connection;
-		$this->connections[] = $connection;
+		return $this->connections->getAllSocketsByThread($this->id);
 	}
 
 }

@@ -3,31 +3,44 @@ namespace JohnNet;
 
 class Connections extends \Stackable {
 
+    public function __construct(){
+
+    }
+
+
     public function findBySocket(&$socket){
-        foreach($this as &$connection){
-            if($connection->socket == $socket){
-                return $connection;
+        foreach($this as $pool){
+            foreach($pool as $connection){
+                if($connection->socket == $socket){
+                    return $connection;
+                }
             }
         }
 
         return false;
     }
 
-    public function getAllSockets(){
-        $return = [];
 
-        echo "1\n";
-
-        //var_dump($this);
-
-        foreach($this as $connection){
-            $return[] = $connection->socket;
+    public function remove($conn){
+        foreach($this as &$pool){
+            foreach($pool as &$connection) {
+                if ($connection == $conn) {
+                    unset($connection);
+                }
+            }
         }
-
-        echo "2\n";
-
-        return $return;
     }
 
+    public function getAllSocketsByThread($thread){
+        $return = [];
+        //$connections = $this->connections->chunk(count($this->connections), true);
+        var_dump($this);
+        exit();
+        foreach($this[$thread] as $connection) {
+            $return[] = $connection->socket;
+        }
+        var_dump($return);
+        return $return;
+    }
     public function run(){}
 }
