@@ -9,11 +9,9 @@ class Connections extends \Stackable {
 
 
     public function findBySocket(&$socket){
-        foreach($this as $pool){
-            foreach($pool as $connection){
-                if($connection->socket == $socket){
-                    return $connection;
-                }
+        foreach($this as $i => &$connection){
+            if($connection->socket == $socket){
+                return $connection;
             }
         }
 
@@ -22,24 +20,21 @@ class Connections extends \Stackable {
 
 
     public function remove($conn){
-        foreach($this as &$pool){
-            foreach($pool as &$connection) {
-                if ($connection == $conn) {
-                    unset($connection);
-                }
+        foreach($this as &$connection) {
+            if ($connection == $conn) {
+                unset($connection);
             }
         }
     }
 
     public function getAllSocketsByThread($thread){
         $return = [];
-        //$connections = $this->connections->chunk(count($this->connections), true);
-        var_dump($this);
-        exit();
-        foreach($this[$thread] as $connection) {
-            $return[] = $connection->socket;
+
+        foreach($this as $connection) {
+            if($connection->handlerID == $thread) {
+                $return[] = $connection->socket;
+            }
         }
-        var_dump($return);
         return $return;
     }
     public function run(){}

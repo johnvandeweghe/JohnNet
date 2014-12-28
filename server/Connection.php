@@ -4,12 +4,16 @@ namespace JohnNet;
 
 abstract class Connection extends \Stackable {
     public $socket;
+    public $name;
+    public $handlerID;
 
     public $ready = false;
     public $closed = false;
 
-    public function __construct(&$socket){
+    public function __construct(&$socket, $handlerID){
         $this->socket = $socket;
+        $this->name = stream_socket_get_name($socket, true);
+        $this->handlerID = $handlerID;
     }
 
     public function writeRaw($payload){

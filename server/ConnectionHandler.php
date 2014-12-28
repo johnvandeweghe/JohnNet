@@ -35,12 +35,12 @@ class ConnectionHandler extends \Thread {
 
 		foreach($sockets as $socket){
 			if(!is_resource($socket)){
-				$connection = $this->findBySocket($socket);
+				$connection = $this->connections->findBySocket($socket);
 				$connection->close();
 				$this->remove($connection);
 				echo "Close 1\n";
 			} else {
-				$livingSockets[] = &$socket;
+				$livingSockets[] = $socket;
 			}
 		}
 
@@ -48,13 +48,17 @@ class ConnectionHandler extends \Thread {
 
 		$write = NULL;
 		$except = NULL;
-		if ($sockets && stream_select($livingSockets, $write, $except, 5) > 0) {
+		if ($sockets && stream_select($livingSockets, $write, $except, 3) > 0) {
 			echo "Select found data in " . count($livingSockets) . " sockets\n";
 			foreach($livingSockets as $c=>$socket){
-				$connection = $this->findBySocket($socket);
-				if(!$connection){
+				$connection = $this->connections->findBySocket($socket);
+				if($connection === false){
+					echo "MAN DOWN\n";
 					throw new \Exception('Couldnt find socket: ' . $socket);
 				}
+				$realSocket = $connection->socket;
+				$connection->socket = $socket;
+
 
 				$firstRead = true;
 				$remaining = 1;
@@ -100,6 +104,7 @@ class ConnectionHandler extends \Thread {
 				}
 
 				$connection->handleRead($this, $contents);
+				$connection->socket = $realSocket;
 			}
 		} else {
 			return false;
