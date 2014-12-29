@@ -53,7 +53,6 @@ class ConnectionHandler extends \Thread {
 			foreach($livingSockets as $c=>$socket){
 				$connection = $this->connections->findBySocket($socket);
 				if($connection === false){
-					echo "MAN DOWN\n";
 					throw new \Exception('Couldnt find socket: ' . $socket);
 				}
 				$realSocket = $connection->socket;
