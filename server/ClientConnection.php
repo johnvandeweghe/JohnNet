@@ -9,7 +9,7 @@ class ClientConnection extends Connection {
 
     public $isHandshake = false;
 
-    public $subscriptions = [];
+    public $subscriptions;
     public $applicationID;
 
     public $cookie = [];
@@ -91,6 +91,27 @@ class ClientConnection extends Connection {
                                         $this->writePayload('subscribe', [
                                             'status' => 'failed',
                                             'message' => 'Access to channel denied'
+                                        ]);
+                                    }
+                                } else {
+                                    $this->writePayload('subscribe', [
+                                        'status' => 'failed',
+                                        'message' => 'Not yet registered'
+                                    ]);
+                                }
+                                break;
+                            case 'unsubscribe':
+                                if($this->isReady()){
+                                    if($this->isSubscribed($payload['payload']['channel'])){
+                                        $this->unsubscribe($payload['payload']['channel']);
+                                        $this->writePayload('subscribe', [
+                                            'status' => 'success',
+                                            'message' => 'Unsubscribed from channel'
+                                        ]);
+                                    } else {
+                                        $this->writePayload('subscribe', [
+                                            'status' => 'failed',
+                                            'message' => 'Not subscribed to that channel'
                                         ]);
                                     }
                                 } else {
@@ -193,7 +214,7 @@ class ClientConnection extends Connection {
 
     public function register($app_id, $app_secret, $handler){
         if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id] === $app_secret) {
-            $this->subscriptions = [];
+            $this->subscriptions = new \Stackable();
             $this->applicationID = $app_id;
             $this->isRegistered = true;
             return true;
@@ -210,8 +231,21 @@ class ClientConnection extends Connection {
         return false;
     }
 
+    public function unsubscribe($channel){
+        if($this->isSubscribed($channel)){
+            $subscribed = [];
+            foreach($this->subscriptions as $subs){
+                if($subs !== $channel){
+                    $subscribed[] = $channel;
+                }
+            }
+            $this->subscriptions = $subscribed;
+        }
+    }
+
     public function isSubscribed($channel){
-        return in_array($this->subscriptions, $channel);
+        var_dump($this->subscriptions);
+        return in_array($channel, $this->subscriptions);
     }
 
     public function writePayload($type, $payload){

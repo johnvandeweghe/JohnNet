@@ -35,10 +35,10 @@ class ConnectionHandler extends \Thread {
 
 		foreach($sockets as $socket){
 			if(!is_resource($socket)){
+				echo "Close 1\n";
 				$connection = $this->connections->findBySocket($socket);
 				$connection->close();
-				$this->remove($connection);
-				echo "Close 1\n";
+				$this->connections->remove($connection);
 			} else {
 				$livingSockets[] = $socket;
 			}
@@ -65,17 +65,17 @@ class ConnectionHandler extends \Thread {
 
 				while ($remaining > 0) {
 					if (feof($socket)) {
-						$connection->close();
 						echo "Close 2\n";
-						$this->remove($connection);
+						$connection->close();
+						$this->connections->remove($connection);
 						continue 2;
 					}
 					$read = fread($socket, $remaining);
 
 					if ($read === false) {
-						$connection->close();
 						echo "Close 3\n";
-						$this->remove($connection);
+						$connection->close();
+						$this->connections->remove($connection);
 						continue 2;
 					}
 
@@ -90,9 +90,9 @@ class ConnectionHandler extends \Thread {
 					}
 
 					if (feof($socket)) {
-						$connection->close();
 						echo "Close 4\n";
-						$this->remove($connection);
+						$connection->close();
+						$this->connections->remove($connection);
 						continue 2;
 					}
 
