@@ -193,13 +193,25 @@ class ClientConnection extends Connection {
 
     public function register($app_id, $app_secret, $handler){
         if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id] === $app_secret) {
-            //$this->subscriptions = new \Stackable();
+            $this->subscriptions = [];
             $this->applicationID = $app_id;
             $this->isRegistered = true;
             return true;
         } else {
             return false;
         }
+    }
+
+    public function subscribe($channel){
+        if(true){
+            $this->subscriptions[] = $channel;
+            return true;
+        }
+        return false;
+    }
+
+    public function isSubscribed($channel){
+        return in_array($this->subscriptions, $channel);
     }
 
     public function writePayload($type, $payload){
