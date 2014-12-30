@@ -14,8 +14,8 @@ class ClientConnection extends Connection {
 
     public $cookie = [];
 
-    public function __construct(&$socket){
-        parent::__construct($socket);
+    public function __construct(&$socket, $handlerID){
+        parent::__construct($socket, $handlerID);
     }
 
     public function handleRead($handler, $buffer){

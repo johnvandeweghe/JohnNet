@@ -7,6 +7,7 @@ class Server {
 
 	private $connectionHandlers = [];
 	public $connections;
+	public $connections_local = [];
 
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	const key = "jhiybURTSDD&@o82ty@G*6gug28y2oihouKHKYgkgig2ugpqpz";
@@ -20,13 +21,13 @@ class Server {
 		$this->port = $port;
 		$this->application_secrets = $application_secrets;
 		$this->connections = new Connections();
+		var_dump($this->connections);
 	}
 
 	public function live($clientThreads = 4, $nodeAddress = ''){
 		ob_implicit_flush();
 
 		for($i = 0; $i < $clientThreads; $i++){
-			$this->connections[$i] = new \Stackable();
 			$handler = new ConnectionHandler($i, $this->connections, $this->application_secrets);
 			$handler->start();
 			$this->connectionHandlers[] = $handler;
@@ -71,7 +72,10 @@ class Server {
 							continue;//socket accept failure
 						} else {
 							//TODO actual logic for load balancing
-							$this->connections[0][] = new ClientConnection($client);
+							$con = new ClientConnection($client, 0);
+
+							$this->connections_local[] = $con;
+							$this->connections[] = $con;
 						}
 					}
 				}
