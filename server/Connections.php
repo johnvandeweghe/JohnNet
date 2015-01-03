@@ -20,11 +20,13 @@ class Connections extends \Stackable {
 
 
     public function remove($conn){
-        foreach($this as &$connection) {
+        foreach($this as $i => $connection) {
             if ($connection == $conn) {
-                unset($connection);
+                array_slice($this, $i, 1);
+                break;
             }
         }
+        var_dump($this);
     }
 
     public function getAllSocketsByThread($thread){

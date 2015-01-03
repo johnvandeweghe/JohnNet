@@ -46,6 +46,7 @@ abstract class Connection extends \Stackable {
         $this->closed = true;
         if(is_resource($this->socket)) {
             fclose($this->socket);
+            $this->socket = false;
         }
     }
 
