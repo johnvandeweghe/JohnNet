@@ -56,6 +56,8 @@ var PubSubHost = function(app_id, app_secret, debug){
 		if(retries <= _this.retryLimit) {
 			setTimeout(_this.connect, 500);
 			retries++;
+		} else {
+			log('Giving up on connecting');
 		}
 	};
 
@@ -69,7 +71,7 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	this.close = function(){
-		websocket.close('Closed by client');
+		websocket.close('Closed by client', 1000);
 	};
 
 	this.register = function(){
