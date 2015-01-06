@@ -1,7 +1,6 @@
 <?php
 if(PHP_SAPI == "cli"){
 	require_once("Server.class.php");
-	require_once("User.class.php");
 	require_once("ConnectionHandler.php");
 	require_once("Connection.php");
 	require_once("Connections.php");
@@ -13,16 +12,15 @@ if(PHP_SAPI == "cli"){
 	set_time_limit(0);
 
 	$master = new JohnNet\Server("localhost", 8080, $application_secrets);
-	$master->live(1, isset($argv[1]) ? $argv[1] : '');
+	$master->live(2, isset($argv[1]) ? $argv[1] : '');
 }
 
 /*
  * TODO
  * Server listen port
  * ServerConnection Read handler (read publishes. read channel joins, maintain P2P channel list, for webhook existence/vacate events (only "presence-" ?)
- * ClientConnection Read handler (subscribes, publishes)
  * Handle publishes to server's users
- * Front end (channel bind handler, channel trigger handler, subscribe handler, reconnection handler, route to new server handler, logging, authentication, etc)
+ * Front end (channel bind handler, subscribe handler, route to new server handler, authentication, etc)
  * Server side Longpolling support... ?
  * HTTP RESTFUL API (server clients)
  * Add a server purely for webshook handling

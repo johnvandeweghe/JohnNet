@@ -17,7 +17,6 @@ class ConnectionHandler extends \Thread {
 
 	public function run(){
 		while(true){
-			echo "thread #". $this->id . " is running!\n";
 			if(!$this->read()){
 				sleep(3);
 			}
@@ -29,7 +28,7 @@ class ConnectionHandler extends \Thread {
 
 		$sockets = $this->getAllSockets();
 
-		echo "Found " . count($sockets) . " sockets\n";
+		echo "thread #". $this->id . " found " . count($sockets) . " sockets\n";
 
 		$livingSockets = [];
 
@@ -44,7 +43,7 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 
-		echo "Reduced to " . count($livingSockets) . " open sockets\n";
+		//echo "Reduced to " . count($livingSockets) . " open sockets\n";
 
 		$write = NULL;
 		$except = NULL;

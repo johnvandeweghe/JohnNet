@@ -23,20 +23,35 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	var onMessage = function(payload){
-		payload = JSON.parse(payload);
+		payload = JSON.parse(payload.data);
 		if(typeof payload !== 'undefined' && typeof payload.type !== 'undefined'){
 			var type = payload.type;
 			payload = payload.payload;
 
 			switch(type){
 				case 'register':
-					if(payload.status == 'sucess') {
+					if(payload.status == 'success') {
 						log('Registered');
 					} else {
 						log('Registration failed with error message: ' + payload.message);
 					}
 					break;
 				case 'subscribe':
+					if(payload.status == 'success') {
+						log('Subscribed');
+					} else {
+						log('Subscription failed with error message: ' + payload.message);
+					}
+					break;
+				case 'publish':
+					if(payload.status == 'success') {
+						log('Published');
+					} else {
+						log('Publish failed with error message: ' + payload.message);
+					}
+					break;
+				case 'payload':
+					log(payload);
 					break;
 			}
 		}

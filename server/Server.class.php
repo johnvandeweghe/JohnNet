@@ -1,7 +1,7 @@
 <?php
 namespace JohnNet;
 
-//Attempts to implement RFC6455 http://datatracker.ietf.org/doc/rfc6455/?include_text=1
+//Attempts to implement RFC6455
 class Server {
 	public $listeners = [];
 
@@ -73,7 +73,8 @@ class Server {
 						} else {
 							//TODO actual logic for load balancing
 							$subs = new \Stackable();
-							$con = new ClientConnection($client, 0, $subs);
+							echo "New connection assigned to handler #" . (count($this->connections_local) % count($this->connectionHandlers)) . "\n";
+							$con = new ClientConnection($client, count($this->connections_local) % count($this->connectionHandlers), $subs);
 
 							$this->connections_local[] = $con;
 							$this->connections[] = $con;
