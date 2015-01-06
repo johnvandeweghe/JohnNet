@@ -6,28 +6,36 @@ var PubSubHost = function(app_id, app_secret, debug){
 
 	var _this = this;
 
-	var websocket = new WebSocket('ws://localhost:8080');
+	var websocket = null;
 	var retries = 0;
 
-	websocket.onopen = function(m){
+	var log = function(){
+		if(_this.debug) {
+			console.log.apply(console, arguments);
+		}
+	};
+
+	var onOpen = function(m){
+		log('Connected');
 		_this.register();
 		retries = 0;
 	};
 
-	websocket.onmessage = function(payload){
-		console.log(payload);
+	var onMessage = function(payload){
+		log(payload);
 	};
 
-	websocket.onclose = function(m){
-		console.log(m);
+	var onClose = function(m){
+		log('Closed');
 		if(retries <= _this.retryLimit) {
 			setTimeout(_this.connect, 500);
 			retries++;
 		}
 	};
 
-	websocket.onerror = function(m){
-		console.log(m);
+	var onError = function(m){
+		log('Error:');
+		log(m);
 		if(retries <= _this.retryLimit) {
 			setTimeout(_this.connect, 500);
 			retries++;
@@ -35,7 +43,12 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	this.connect = function(){
+		log('Reconnecting...');
 		websocket = new WebSocket('ws://localhost:8080');
+		websocket.onerror = onError;
+		websocket.onmessage = onMessage;
+		websocket.onclose = onClose;
+		websocket.onopen = onOpen;
 	};
 
 	this.close = function(){
@@ -44,10 +57,12 @@ var PubSubHost = function(app_id, app_secret, debug){
 
 	this.register = function(){
 		var obj = {'type': 'register', 'payload': {'app_id': this.app_id, 'app_secret': this.app_secret}};
+		log('Registering...');
 		websocket.send(JSON.stringify(obj));
 	};
 
 	this.subscribe = function(channel){
+		log('Subscribing to ' + channel + '...');
 		var obj = {'type': 'subscribe', 'payload': {'channel': channel}};
 		websocket.send(JSON.stringify(obj));
 	};
@@ -60,4 +75,6 @@ var PubSubHost = function(app_id, app_secret, debug){
 	this.publish = function(channel, payload){
 
 	};
+
+	this.connect();
 };

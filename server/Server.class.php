@@ -7,6 +7,7 @@ class Server {
 
 	private $connectionHandlers = [];
 	public $connections;
+	public $subscriptions;
 	public $connections_local = [];
 
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -21,7 +22,6 @@ class Server {
 		$this->port = $port;
 		$this->application_secrets = $application_secrets;
 		$this->connections = new Connections();
-		var_dump($this->connections);
 	}
 
 	public function live($clientThreads = 4, $nodeAddress = ''){
@@ -72,10 +72,12 @@ class Server {
 							continue;//socket accept failure
 						} else {
 							//TODO actual logic for load balancing
-							$con = new ClientConnection($client, 0);
+							$subs = new \Stackable();
+							$con = new ClientConnection($client, 0, $subs);
 
 							$this->connections_local[] = $con;
 							$this->connections[] = $con;
+							$this->subscriptions[] = $subs;
 						}
 					}
 				}

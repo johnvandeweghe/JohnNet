@@ -9,13 +9,14 @@ class ClientConnection extends Connection {
 
     public $isHandshake = false;
 
-    public $subscriptions;
+    private $subscriptions;
     public $applicationID;
 
     public $cookie = [];
 
-    public function __construct(&$socket, $handlerID){
+    public function __construct(&$socket, $handlerID, &$subscriptions){
         parent::__construct($socket, $handlerID);
+        $this->subscriptions = $subscriptions;
     }
 
     public function handleRead($handler, $buffer){
@@ -81,7 +82,9 @@ class ClientConnection extends Connection {
                                 ]);
                                 break;
                             case 'subscribe':
+                                var_dump(1);
                                 if($this->isReady()){
+                                    var_dump(2);
                                     if($this->subscribe($payload['payload']['channel'])) {
                                         $this->writePayload('subscribe', [
                                             'status' => 'success',
@@ -214,7 +217,6 @@ class ClientConnection extends Connection {
 
     public function register($app_id, $app_secret, $handler){
         if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id] === $app_secret) {
-            $this->subscriptions = new \Stackable();
             $this->applicationID = $app_id;
             $this->isRegistered = true;
             return true;
@@ -233,19 +235,21 @@ class ClientConnection extends Connection {
 
     public function unsubscribe($channel){
         if($this->isSubscribed($channel)){
-            $subscribed = [];
-            foreach($this->subscriptions as $subs){
-                if($subs !== $channel){
-                    $subscribed[] = $channel;
+            foreach($this->subscriptions as $i=>$subs){
+                if($subs === $channel){
+                   unset($this->subscriptions[$i]);
                 }
             }
-            $this->subscriptions = $subscribed;
         }
     }
 
     public function isSubscribed($channel){
-        var_dump($this->subscriptions);
-        return in_array($channel, $this->subscriptions);
+        foreach($this->subscriptions as $sub){
+            if($channel === $sub){
+                return true;
+            }
+        }
+        return false;
     }
 
     public function writePayload($type, $payload){

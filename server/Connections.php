@@ -21,12 +21,11 @@ class Connections extends \Stackable {
 
     public function remove($conn){
         foreach($this as $i => $connection) {
-            if ($connection == $conn) {
-                array_slice($this, $i, 1);
-                break;
+            if ($connection === $conn) {
+                echo "UNSET $i\n";
+                unset($this[$i]);
             }
         }
-        var_dump($this);
     }
 
     public function getAllSocketsByThread($thread){
@@ -39,5 +38,17 @@ class Connections extends \Stackable {
         }
         return $return;
     }
+
+    public function getAllByChannel($channel){
+        $return = [];
+
+        foreach($this as $connection) {
+            if($connection->isSubscribed($channel)) {
+                $return[] = $connection;
+            }
+        }
+        return $return;
+    }
+
     public function run(){}
 }

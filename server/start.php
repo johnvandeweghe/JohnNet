@@ -20,7 +20,7 @@ if(PHP_SAPI == "cli"){
  * TODO
  * Server listen port
  * ServerConnection Read handler (read publishes. read channel joins, maintain P2P channel list, for webhook existence/vacate events (only "presence-" ?)
- * ClientConnection Read handler (registration (needs DB...), subscribes, publishes)
+ * ClientConnection Read handler (subscribes, publishes)
  * Handle publishes to server's users
  * Front end (channel bind handler, channel trigger handler, subscribe handler, reconnection handler, route to new server handler, logging, authentication, etc)
  * Server side Longpolling support... ?
@@ -28,7 +28,7 @@ if(PHP_SAPI == "cli"){
  * Add a server purely for webshook handling
  *
  *
- * Low priority (could do after Kipsu integration):
+ * Low priority (could do after potential Kipsu integration):
  * Front end UI to create applications/register webhooks?
  * compression WS extension support
  */
