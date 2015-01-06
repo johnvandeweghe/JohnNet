@@ -127,7 +127,7 @@ class ClientConnection extends Connection {
                             case 'publish':
                                 if($this->isReady()){
                                     if($sub = $this->isSubscribed($payload['payload']['channel'])){
-                                        $this->publish($payload['payload']['channel'], $payload['payload']);
+                                        $handler->publish($this->applicationID, $payload['payload']['channel'], $payload['payload']['payload'], $this);
                                         $this->writePayload('publish', [
                                             'status' => 'success',
                                             'message' => 'Payload published to channel'

@@ -39,11 +39,11 @@ class Connections extends \Stackable {
         return $return;
     }
 
-    public function getAllByChannel($channel){
+    public function getAllByAppIDAndChannel($applicationID, $channel){
         $return = [];
 
         foreach($this as $connection) {
-            if($connection->isSubscribed($channel)) {
+            if($connection->applicationID === $applicationID && $connection->isSubscribed($channel)) {
                 $return[] = $connection;
             }
         }

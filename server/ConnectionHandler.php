@@ -116,4 +116,17 @@ class ConnectionHandler extends \Thread {
 		return $this->connections->getAllSocketsByThread($this->id);
 	}
 
+	public function publish($applicationID, $channel, $payload, $exclude = false){
+		$clients = $this->connections->getAllByAppIDAndChannel($applicationID, $channel);
+
+		foreach($clients as $client){
+			if($client !== $exclude) {
+				$client->writePayload('payload', [
+					'channel' => $channel,
+					'payload' => $payload
+				]);
+			}
+		}
+	}
+
 }

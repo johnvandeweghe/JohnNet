@@ -8,6 +8,7 @@ var PubSubHost = function(app_id, app_secret, debug){
 
 	var websocket = null;
 	var retries = 0;
+	var channels = [];
 
 	var log = function(){
 		if(_this.debug) {
@@ -22,7 +23,23 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	var onMessage = function(payload){
-		log(payload);
+		payload = JSON.parse(payload);
+		if(typeof payload !== 'undefined' && typeof payload.type !== 'undefined'){
+			var type = payload.type;
+			payload = payload.payload;
+
+			switch(type){
+				case 'register':
+					if(payload.status == 'sucess') {
+						log('Registered');
+					} else {
+						log('Registration failed with error message: ' + payload.message);
+					}
+					break;
+				case 'subscribe':
+					break;
+			}
+		}
 	};
 
 	var onClose = function(m){
@@ -68,12 +85,19 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	this.unsubscribe = function(channel){
+		log('Unsubscribing from ' + channel + '...')
 		var obj = {'type': 'unsubscribe', 'payload': {'channel': channel}};
 		websocket.send(JSON.stringify(obj));
 	};
 
 	this.publish = function(channel, payload){
+		log('Publishing to ' + channel + '...')
+		var obj = {'type': 'publish', 'payload': {'channel': channel, 'payload': payload}};
+		websocket.send(JSON.stringify(obj));
+	};
 
+	this.bind = function(channel, event){
+		channels.event = event;
 	};
 
 	this.connect();
