@@ -102,13 +102,13 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	this.unsubscribe = function(channel){
-		log('Unsubscribing from ' + channel + '...')
+		log('Unsubscribing from ' + channel + '...');
 		var obj = {'type': 'unsubscribe', 'payload': {'channel': channel}};
 		websocket.send(JSON.stringify(obj));
 	};
 
 	this.publish = function(channel, payload){
-		log('Publishing to ' + channel + '...')
+		log('Publishing to ' + channel + '...');
 		var obj = {'type': 'publish', 'payload': {'channel': channel, 'payload': payload}};
 		websocket.send(JSON.stringify(obj));
 	};
