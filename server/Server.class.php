@@ -29,8 +29,8 @@ class Server {
 
 		for($i = 0; $i < $clientThreads; $i++){
 			$handler = new ConnectionHandler($i, $this->connections, $this->application_secrets);
-			$handler->start();
 			$this->connectionHandlers[] = $handler;
+			$handler->start();
 		}
 
 		$ctx = stream_context_create(

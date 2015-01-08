@@ -73,18 +73,14 @@ var PubSubHost = function(app_id, app_secret, debug){
 		if(retries <= _this.retryLimit) {
 			setTimeout(_this.connect, 500);
 			retries++;
+		} else {
+			log('Giving up on connecting');
 		}
 	};
 
 	var onError = function(m){
 		log('Error:');
 		log(m);
-		if(retries <= _this.retryLimit) {
-			setTimeout(_this.connect, 500);
-			retries++;
-		} else {
-			log('Giving up on connecting');
-		}
 	};
 
 	this.connect = function(){

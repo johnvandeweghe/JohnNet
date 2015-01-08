@@ -68,8 +68,8 @@ class ClientConnection extends Connection {
                                     break;
                                 }
 
-
                                 if($this->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $handler)) {
+                                    echo "CLIENT REGISTERED\n";
                                     $this->writePayload('register', [
                                         'status' => 'success',
                                         'message' => 'Registered'
