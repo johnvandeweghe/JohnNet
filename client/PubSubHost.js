@@ -8,7 +8,11 @@ var PubSubHost = function(app_id, app_secret, debug){
 
 	var websocket = null;
 	var retries = 0;
-	var channels = [];
+	var eventHandlers = [];
+
+	var sendPayload = function(type, payload){
+		return websocket.send(JSON.stringify({'type': type, 'payload': payload}));
+	};
 
 	var log = function(){
 		if(_this.debug) {
@@ -31,27 +35,34 @@ var PubSubHost = function(app_id, app_secret, debug){
 			switch(type){
 				case 'register':
 					if(payload.status == 'success') {
-						log('Registered');
+						_this.fireEvent('registration_success', payload);
 					} else {
-						log('Registration failed with error message: ' + payload.message);
+						_this.fireEvent('registration_failed', payload);
 					}
 					break;
 				case 'subscribe':
 					if(payload.status == 'success') {
-						log('Subscribed');
+						_this.fireEvent('subscription_success', payload);
 					} else {
-						log('Subscription failed with error message: ' + payload.message);
+						_this.fireEvent('subscription_failed', payload);
+					}
+					break;
+				case 'unsubscribe':
+					if(payload.status == 'success') {
+						_this.fireEvent('unsubscription_success', payload);
+					} else {
+						_this.fireEvent('unsubscription_failed', payload);
 					}
 					break;
 				case 'publish':
 					if(payload.status == 'success') {
-						log('Published');
+						_this.fireEvent('publish_success', payload);
 					} else {
-						log('Publish failed with error message: ' + payload.message);
+						_this.fireEvent('publish_failed', payload);
 					}
 					break;
 				case 'payload':
-					log(payload);
+					_this.fireEvent('payload_received', payload);
 					break;
 			}
 		}
@@ -62,18 +73,14 @@ var PubSubHost = function(app_id, app_secret, debug){
 		if(retries <= _this.retryLimit) {
 			setTimeout(_this.connect, 500);
 			retries++;
+		} else {
+			log('Giving up on connecting');
 		}
 	};
 
 	var onError = function(m){
 		log('Error:');
 		log(m);
-		if(retries <= _this.retryLimit) {
-			setTimeout(_this.connect, 500);
-			retries++;
-		} else {
-			log('Giving up on connecting');
-		}
 	};
 
 	this.connect = function(){
@@ -90,31 +97,52 @@ var PubSubHost = function(app_id, app_secret, debug){
 	};
 
 	this.register = function(){
-		var obj = {'type': 'register', 'payload': {'app_id': this.app_id, 'app_secret': this.app_secret}};
-		log('Registering...');
-		websocket.send(JSON.stringify(obj));
+		var payload = {'app_id': this.app_id, 'app_secret': this.app_secret};
+		sendPayload('register', payload);
+		this.fireEvent('registration_sent', payload);
 	};
 
 	this.subscribe = function(channel){
-		log('Subscribing to ' + channel + '...');
-		var obj = {'type': 'subscribe', 'payload': {'channel': channel}};
-		websocket.send(JSON.stringify(obj));
+		var payload = {'channel': channel};
+		sendPayload('subscribe', payload);
+		this.fireEvent('subscription_sent', payload);
 	};
 
 	this.unsubscribe = function(channel){
-		log('Unsubscribing from ' + channel + '...');
-		var obj = {'type': 'unsubscribe', 'payload': {'channel': channel}};
-		websocket.send(JSON.stringify(obj));
+		var payload = {'channel': channel};
+		sendPayload('unsubscribe', payload);
+		this.fireEvent('unsubscription_sent', payload);
 	};
 
 	this.publish = function(channel, payload){
-		log('Publishing to ' + channel + '...');
-		var obj = {'type': 'publish', 'payload': {'channel': channel, 'payload': payload}};
-		websocket.send(JSON.stringify(obj));
+		var wspayload = {'channel': channel, 'payload': payload};
+		sendPayload('publish', wspayload);
+		this.fireEvent('publish_sent', wspayload);
 	};
 
-	this.bind = function(channel, event){
-		channels.event = event;
+	this.bind = function(event, handler){
+		if(typeof eventHandlers[event] === 'undefined'){
+			eventHandlers[event] = [];
+		}
+		eventHandlers[event].push(handler);
+	};
+
+	this.bindChannel = function(channel, handler){
+		this.bind('publish', function(data){
+			if(data.channel === channel) {
+				handler.apply(_this, data);
+			}
+		});
+	};
+
+	this.fireEvent = function(event, data) {
+		if (typeof eventHandlers[event] !== 'undefined') {
+			for(var i in eventHandlers[event]){
+				if(eventHandlers[event][i] instanceof Function){
+					eventHandlers[event][i].apply(_this, [data]);
+				}
+			}
+		}
 	};
 
 	this.connect();
