@@ -71,7 +71,6 @@ class Server {
 						if ($client < 0) {
 							continue;//socket accept failure
 						} else {
-							//TODO actual logic for load balancing
 							$subs = new \Stackable();
 							echo "New connection assigned to handler #" . (count($this->connections_local) % count($this->connectionHandlers)) . "\n";
 							$con = new ClientConnection($client, count($this->connections_local) % count($this->connectionHandlers), $subs);
