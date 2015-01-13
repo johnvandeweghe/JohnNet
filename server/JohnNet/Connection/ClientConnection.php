@@ -14,7 +14,9 @@ class ClientConnection extends Connection {
     private $subscriptions;
     public $applicationID;
 
-    public $cookie = [];
+    public $sessionKey = '';
+
+    public static $server;
 
     public function __construct(&$socket, $handlerID, &$subscriptions){
         parent::__construct($socket, $handlerID);
@@ -195,7 +197,9 @@ class ClientConnection extends Connection {
             if($cookies){
                 foreach($cookies as $cookie){
                     list($key, $value) = explode("=", $cookie);
-                    $this->cookie[$key] = $value;
+                    if($key == 'session_id'){
+                        $this->loadSession($value);
+                    }
                 }
             }
         }
@@ -252,6 +256,10 @@ class ClientConnection extends Connection {
             }
         }
         return false;
+    }
+
+    public function loadSession($sessionKey){
+
     }
 
     public function writePayload($type, $payload){

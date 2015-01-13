@@ -22,6 +22,7 @@ class Server {
 		$this->port = $port;
 		$this->application_secrets = $application_secrets;
 		$this->connections = new Connections();
+		$this->connections = new Sessions();
 	}
 
 	public function live($clientThreads = 4, $nodeAddress = ''){

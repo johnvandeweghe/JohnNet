@@ -1,6 +1,6 @@
 <?php
 if(PHP_SAPI == "cli"){
-	require_once("JohnNet/Server.class.php");
+	require_once("JohnNet/Server.php");
 	require_once("JohnNet/ConnectionHandler.php");
 	require_once("JohnNet/Connection/Connection.php");
 	require_once("JohnNet/Connection/ClientConnection.php");
