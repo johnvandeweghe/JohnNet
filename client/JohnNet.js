@@ -1,4 +1,4 @@
-var PubSubHost = function(app_id, app_secret, debug){
+var JohnNet = function(app_id, app_secret, debug){
 	this.app_id = app_id;
 	this.app_secret = app_secret;
 	this.debug = (typeof debug !== 'undefined') ? debug : true;

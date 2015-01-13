@@ -8,9 +8,9 @@ class Connections extends \Stackable {
     }
 
 
-    public function findBySocket(&$socket){
+    public function findByThreadIDAndSocket($thread, &$socket){
         foreach($this as $i => &$connection){
-            if($connection->socket == $socket){
+            if($connection->handlerID == $thread && $connection->socket == $socket){
                 return $connection;
             }
         }
@@ -36,6 +36,7 @@ class Connections extends \Stackable {
                 $return[] = $connection->socket;
             }
         }
+
         return $return;
     }
 

@@ -35,7 +35,7 @@ class ConnectionHandler extends \Thread {
 		foreach($sockets as $socket){
 			if(!is_resource($socket)){
 				echo "Close 1\n";
-				$connection = $this->connections->findBySocket($socket);
+				$connection = $this->findByThreadIDAndSocket($socket);
 				$connection->close();
 				$this->connections->remove($connection);
 			} else {
@@ -47,10 +47,10 @@ class ConnectionHandler extends \Thread {
 
 		$write = NULL;
 		$except = NULL;
-		if ($sockets && stream_select($livingSockets, $write, $except, 3) > 0) {
+		if ($livingSockets && stream_select($livingSockets, $write, $except, 3) > 0) {
 			echo "Select found data in " . count($livingSockets) . " sockets\n";
 			foreach($livingSockets as $c=>$socket){
-				$connection = $this->connections->findBySocket($socket);
+				$connection = $this->findByThreadIDAndSocket($socket);
 				if($connection === false){
 					throw new \Exception('Couldnt find socket: ' . $socket);
 				}
@@ -113,6 +113,10 @@ class ConnectionHandler extends \Thread {
 
 	public function getAllSockets(){
 		return $this->connections->getAllSocketsByThread($this->id);
+	}
+
+	public function findByThreadIDAndSocket($socket){
+		return $this->connections->findByThreadIDAndSocket($this->id, $socket);
 	}
 
 	public function publish($applicationID, $channel, $payload, $exclude = false){

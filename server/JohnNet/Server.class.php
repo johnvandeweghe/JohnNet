@@ -73,7 +73,7 @@ class Server {
 						} else {
 							$subs = new \Stackable();
 							echo "New connection assigned to handler #" . (count($this->connections_local) % count($this->connectionHandlers)) . "\n";
-							$con = new ClientConnection($client, count($this->connections_local) % count($this->connectionHandlers), $subs);
+							$con = new Connection\ClientConnection($client, count($this->connections_local) % count($this->connectionHandlers), $subs);
 
 							$this->connections_local[] = $con;
 							$this->connections[] = $con;

@@ -1,5 +1,5 @@
 <?php
-namespace JohnNet;
+namespace JohnNet\Connection;
 
 
 abstract class Connection extends \Stackable {

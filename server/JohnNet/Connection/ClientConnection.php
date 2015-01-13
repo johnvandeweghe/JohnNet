@@ -1,5 +1,7 @@
 <?php
-namespace JohnNet;
+namespace JohnNet\Connection;
+
+use \JohnNet\Server;
 
 class ClientConnection extends Connection {
 
