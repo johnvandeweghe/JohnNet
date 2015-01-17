@@ -182,27 +182,32 @@ class ClientConnection extends Connection {
             //$this->user->extensions = explode('; ', $headers['Sec-WebSocket-Extensions']);
         }
 
-        $upgrade = "HTTP/1.1 101 Switching Protocols\r\n" .
-            "Upgrade: websocket\r\n" .
-            "Connection: Upgrade\r\n" .
-            "Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"] . Server::GUID, true)) . "\r\n" .
-            "\r\n";
-
-        $this->writeRaw($upgrade);
-        $this->isHandshake = true;
-        $this->ready();
-
         if(isset($headers["Cookie"])){
             $cookies = explode("; ", $headers["Cookie"]);
             if($cookies){
                 foreach($cookies as $cookie){
                     list($key, $value) = explode("=", $cookie);
                     if($key == 'session_id'){
-                        $this->loadSession($value);
+                        $this->sessionKey = $value;
                     }
                 }
             }
+        } else {
+            $this->sessionKey = md5(microtime(true).rand());
         }
+
+        $expires = new DateTime('1 week');
+
+        $upgrade = "HTTP/1.1 101 Switching Protocols\r\n" .
+            "Upgrade: websocket\r\n" .
+            "Connection: Upgrade\r\n" .
+            "Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"] . Server::GUID, true)) . "\r\n" .
+            "Set-Cookie: session_id={$this->sessionKey}; Domain=" . Server::$URL . "; Path=/; Expires=" . $expires->format(DateTime::COOKIE) . "; HttpOnly\r\n" .
+            "\r\n";
+
+        $this->writeRaw($upgrade);
+        $this->isHandshake = true;
+        $this->ready();
 
         return true;
     }

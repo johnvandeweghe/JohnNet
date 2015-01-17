@@ -12,6 +12,7 @@ class Server {
 
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	const key = "jhiybURTSDD&@o82ty@G*6gug28y2oihouKHKYgkgig2ugpqpz";
+	public static $URL = 'localhost:443';
 
 	private $address, $port;
 
@@ -23,6 +24,8 @@ class Server {
 		$this->application_secrets = $application_secrets;
 		$this->connections = new Connections();
 		$this->connections = new Sessions();
+
+		self::$URL = $this->address . ':' . $this->port;
 	}
 
 	public function live($clientThreads = 4, $nodeAddress = ''){
