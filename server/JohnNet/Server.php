@@ -23,7 +23,7 @@ class Server {
 		$this->port = $port;
 		$this->application_secrets = $application_secrets;
 		$this->connections = new Connections();
-		$this->connections = new Sessions();
+		$this->permanence = new ConnectionPermanence();
 
 		self::$URL = $this->address . ':' . $this->port;
 	}

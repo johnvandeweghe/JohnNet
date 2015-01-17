@@ -196,13 +196,13 @@ class ClientConnection extends Connection {
             $this->sessionKey = md5(microtime(true).rand());
         }
 
-        $expires = new DateTime('1 week');
+        $expires = new \DateTime('1 week');
 
         $upgrade = "HTTP/1.1 101 Switching Protocols\r\n" .
             "Upgrade: websocket\r\n" .
             "Connection: Upgrade\r\n" .
             "Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"] . Server::GUID, true)) . "\r\n" .
-            "Set-Cookie: session_id={$this->sessionKey}; Domain=" . Server::$URL . "; Path=/; Expires=" . $expires->format(DateTime::COOKIE) . "; HttpOnly\r\n" .
+            "Set-Cookie: session_id={$this->sessionKey}; Domain=" . Server::$URL . "; Path=/; Expires=" . $expires->format(\DateTime::COOKIE) . "; HttpOnly\r\n" .
             "\r\n";
 
         $this->writeRaw($upgrade);
@@ -227,7 +227,7 @@ class ClientConnection extends Connection {
     }
 
     public function register($app_id, $app_secret, $handler){
-        if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id] === $app_secret) {
+        if(isset($handler->application_secrets[$app_id]) && $handler->application_secrets[$app_id]['secret'] === $app_secret) {
             $this->applicationID = $app_id;
             $this->isRegistered = true;
             return true;
