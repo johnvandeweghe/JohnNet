@@ -6,6 +6,8 @@
 
 			var log = function(){
 				console.log.apply(console, arguments);
+				if(typeof arguments !== 'undefined' && typeof arguments[0] !== 'undefined' && typeof arguments[0].payload !== 'undefined')
+					document.getElementById('body').innerText += arguments[0].payload + "\n";
 			};
 
 			ws.bind('registration_success', log);
@@ -19,8 +21,12 @@
 			ws.bind('payload_received', log);
 
 		</script>
-	</head>
+		<style type="text/css">
+			body {
+				font-family: monospace;
+			}
+		</style>
 	<body>
-
+	<pre id="body"></pre>
 	</body>
 </html>

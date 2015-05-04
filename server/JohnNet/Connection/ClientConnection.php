@@ -12,15 +12,17 @@ class ClientConnection extends Connection {
     public $isHandshake = false;
 
     private $subscriptions;
+    private $permanence;
     public $applicationID;
 
     public $sessionKey = '';
 
     public static $server;
 
-    public function __construct(&$socket, $handlerID, &$subscriptions){
+    public function __construct(&$socket, $handlerID, &$subscriptions, &$permanence){
         parent::__construct($socket, $handlerID);
         $this->subscriptions = $subscriptions;
+        $this->permanence = $permanence;
     }
 
     public function handleRead($handler, $buffer){
@@ -131,11 +133,18 @@ class ClientConnection extends Connection {
                             case 'publish':
                                 if($this->isReady()){
                                     if($sub = $this->isSubscribed($payload['payload']['channel'])){
-                                        $handler->publish($this->applicationID, $payload['payload']['channel'], $payload['payload']['payload'], $this);
-                                        $this->writePayload('publish', [
-                                            'status' => 'success',
-                                            'message' => 'Payload published to channel'
-                                        ]);
+                                        if(isset($payload['payload']['payload']) && isset($payload['payload']['channel'])){
+                                            $handler->publish($this->applicationID, $payload['payload']['channel'], $payload['payload']['payload'], $this);
+                                            $this->writePayload('publish', [
+                                                'status' => 'success',
+                                                'message' => 'Payload published to channel'
+                                            ]);
+                                        } else {
+                                            $this->writePayload('publish', [
+                                                'status' => 'failed',
+                                                'message' => 'Not subscribed to channel'
+                                            ]);
+                                        }
                                     } else {
                                         $this->writePayload('publish', [
                                             'status' => 'failed',
@@ -214,11 +223,13 @@ class ClientConnection extends Connection {
 
     //Mark a user closed and send them $msg as the reason
     public function close($msg = '', $force = false){
-        var_dump('CLOSED', $msg);
+        var_dump('CLOSED', $msg, $force);
         //If the conditions are right to send a message (handshake completed, not closed) send a close message
         if($this->isHandshake && !$this->closed && !$force) {
             $this->writeWS($msg, 0x8);
         }
+
+        //$this->permanence['sessions'] = $this->sessionKey;
         parent::close();
     }
 

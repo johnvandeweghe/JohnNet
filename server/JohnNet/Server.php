@@ -28,6 +28,11 @@ class Server {
 		self::$URL = $this->address . ':' . $this->port;
 	}
 
+	/**
+	 * @param int $clientThreads
+	 * @param string $nodeAddress
+	 */
+
 	public function live($clientThreads = 4, $nodeAddress = ''){
 		ob_implicit_flush();
 
@@ -77,7 +82,7 @@ class Server {
 						} else {
 							$subs = new \Stackable();
 							echo "New connection assigned to handler #" . (count($this->connections_local) % count($this->connectionHandlers)) . "\n";
-							$con = new Connection\ClientConnection($client, count($this->connections_local) % count($this->connectionHandlers), $subs);
+							$con = new Connection\ClientConnection($client, count($this->connections_local) % count($this->connectionHandlers), $subs, $this->permanence);
 
 							$this->connections_local[] = $con;
 							$this->connections[] = $con;

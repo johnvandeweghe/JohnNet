@@ -9,7 +9,7 @@ class ConnectionHandler extends \Thread {
 
 	private $id;
 
-	function __construct($id, &$connections, $application_secrets){
+	function __construct($id, Connections &$connections, $application_secrets){
 		$this->id = $id;
 		$this->application_secrets = $application_secrets;
 		$this->connections = $connections;

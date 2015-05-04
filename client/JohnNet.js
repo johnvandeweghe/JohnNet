@@ -93,7 +93,7 @@ var JohnNet = function(app_id, app_secret, debug){
 	};
 
 	this.close = function(){
-		websocket.close('Closed by client', 1000);
+		websocket.close(1000);
 	};
 
 	this.register = function(){

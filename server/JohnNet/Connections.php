@@ -32,7 +32,7 @@ class Connections extends \Stackable {
         $return = [];
 
         foreach($this as $connection) {
-            if($connection->handlerID == $thread) {
+            if($connection->handlerID == $thread && !$connection->closed) {
                 $return[] = $connection->socket;
             }
         }
@@ -44,7 +44,7 @@ class Connections extends \Stackable {
         $return = [];
 
         foreach($this as $connection) {
-            if($connection->applicationID === $applicationID && $connection->isSubscribed($channel)) {
+            if(!$connection->closed && $connection->applicationID === $applicationID && $connection->isSubscribed($channel)) {
                 $return[] = $connection;
             }
         }
