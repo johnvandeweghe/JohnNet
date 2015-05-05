@@ -64,6 +64,9 @@ var JohnNet = function(app_id, app_secret, debug){
 				case 'payload':
 					_this.fireEvent('payload_received', payload);
 					break;
+				case 'system':
+					_this.fireEvent('system_message', payload);
+					break;
 			}
 		}
 	};

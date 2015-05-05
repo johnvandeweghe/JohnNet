@@ -73,7 +73,7 @@ class Server {
 				$changed = $this->listeners;
 				$write = NULL;
 				$except = NULL;
-				if (stream_select($changed, $write, $except, 5) > 0) {
+				if (stream_select($changed, $write, $except, 2) > 0) {
 					foreach($changed as &$socket) {
 						//TODO switch on server/client socket
 						$client = stream_socket_accept($socket, 0);

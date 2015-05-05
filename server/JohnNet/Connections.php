@@ -1,13 +1,25 @@
 <?php
 namespace JohnNet;
 
+/**
+ * Class Connections
+ * @package JohnNet
+ */
 class Connections extends \Stackable {
 
+    /**
+     *
+     */
     public function __construct(){
 
     }
 
 
+    /**
+     * @param $thread
+     * @param $socket
+     * @return bool|Connection\ClientConnection
+     */
     public function findByThreadIDAndSocket($thread, &$socket){
         foreach($this as $i => &$connection){
             if($connection->handlerID == $thread && $connection->socket == $socket){
@@ -19,6 +31,9 @@ class Connections extends \Stackable {
     }
 
 
+    /**
+     * @param $conn
+     */
     public function remove($conn){
         foreach($this as $i => $connection) {
             if ($connection === $conn) {
@@ -28,6 +43,10 @@ class Connections extends \Stackable {
         }
     }
 
+    /**
+     * @param $thread
+     * @return Connection\ClientConnection[]
+     */
     public function getAllSocketsByThread($thread){
         $return = [];
 
@@ -40,6 +59,11 @@ class Connections extends \Stackable {
         return $return;
     }
 
+    /**
+     * @param $applicationID
+     * @param $channel
+     * @return Connection\ClientConnection[]
+     */
     public function getAllByAppIDAndChannel($applicationID, $channel){
         $return = [];
 
@@ -51,5 +75,8 @@ class Connections extends \Stackable {
         return $return;
     }
 
+    /**
+     *
+     */
     public function run(){}
 }

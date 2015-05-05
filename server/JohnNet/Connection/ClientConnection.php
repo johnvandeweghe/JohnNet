@@ -37,6 +37,7 @@ class ClientConnection extends Connection {
                 }
                 $this->writeRaw($err);
                 $this->close();
+                $handler->connections->remove($this);
             }
         } else {
             $opcode = ord($buffer[0]) & 15;
@@ -45,6 +46,7 @@ class ClientConnection extends Connection {
                 switch($opcode){
                     case 0x8: //Close
                         $this->close($data, true);
+                        $handler->connections->remove($this);
                         break;
                     case 0x9: //Ping
                         $this->writeWS($data, 0xA);
@@ -53,6 +55,7 @@ class ClientConnection extends Connection {
                         break;
                     default:
                         $this->close("Unknown control frame received");
+                        $handler->connections->remove($this);
                         break;
                 }
             } else {
@@ -160,7 +163,10 @@ class ClientConnection extends Connection {
                                 break;
                         }
                     } else {
-                        //invalid payload
+                        $this->writePayload('system', [
+                            'status' => 'failed',
+                            'message' => 'Invalid data received. JSON only.'
+                        ]);
                     }
                 }
             }
