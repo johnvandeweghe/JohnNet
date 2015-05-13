@@ -4,6 +4,9 @@ namespace JohnNet\Connection;
 
 abstract class Connection extends \Stackable {
     public $socket;
+
+    //Raw, original socket. "$socket" is temporarily not this when read from another thread
+    public $rawSocket;
     public $name;
     public $handlerID;
 
@@ -12,12 +15,14 @@ abstract class Connection extends \Stackable {
 
     public function __construct(&$socket, $handlerID){
         $this->socket = $socket;
+        $this->rawSocket = $socket;
         $this->name = stream_socket_get_name($socket, true);
+        echo "New connection: {$this->name}\n";
         $this->handlerID = $handlerID;
     }
 
     public function writeRaw($payload){
-        return fwrite($this->socket, $payload, strlen($payload));
+        return fwrite(is_resource($this->socket) ? $this->socket : $this->rawSocket, $payload, strlen($payload));
     }
 
     public function readOnce(){

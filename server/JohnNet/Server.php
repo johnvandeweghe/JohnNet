@@ -2,22 +2,65 @@
 namespace JohnNet;
 
 //Attempts to implement RFC6455
+/**
+ * Class Server
+ * @package JohnNet
+ */
 class Server {
+	/**
+	 * @var array
+     */
 	public $listeners = [];
 
+	/**
+	 * @var array
+     */
 	private $connectionHandlers = [];
+	/**
+	 * @var Connections|Connection\ClientConnection[]
+     */
 	public $connections;
+	/**
+	 * @var array
+     */
 	public $subscriptions;
+
+	/**
+	 * @var Connection\ClientConnection[]
+     */
 	public $connections_local = [];
 
+	/**
+	 *
+     */
 	const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+	/**
+	 *
+     */
 	const key = "jhiybURTSDD&@o82ty@G*6gug28y2oihouKHKYgkgig2ugpqpz";
+	/**
+	 * @var string
+     */
 	public static $URL = 'localhost:443';
 
+	/**
+	 * @var
+     */
+	/**
+	 * @var int
+     */
 	private $address, $port;
 
+	/**
+	 * @var bool
+     */
 	private $application_secrets;
 
+	/**
+	 * @param $address
+	 * @param int $port
+	 * @param bool $application_secrets
+     */
 	function __construct($address, $port=443, $application_secrets=false){
 		$this->address = $address;
 		$this->port = $port;
@@ -37,9 +80,7 @@ class Server {
 		ob_implicit_flush();
 
 		for($i = 0; $i < $clientThreads; $i++){
-			$handler = new ConnectionHandler($i, $this->connections, $this->application_secrets);
-			$this->connectionHandlers[] = $handler;
-			$handler->start();
+			$this->startHandler($i);
 		}
 
 		$ctx = stream_context_create(
@@ -73,29 +114,80 @@ class Server {
 				$changed = $this->listeners;
 				$write = NULL;
 				$except = NULL;
-				if (stream_select($changed, $write, $except, 2) > 0) {
+				if (stream_select($changed, $write, $except, 3) > 0) {
 					foreach($changed as &$socket) {
 						//TODO switch on server/client socket
 						$client = stream_socket_accept($socket, 0);
-						if ($client < 0) {
+						if ($client < 0 || !is_resource($client)) {
 							continue;//socket accept failure
 						} else {
-							$subs = new \Stackable();
-							echo "New connection assigned to handler #" . (count($this->connections_local) % count($this->connectionHandlers)) . "\n";
-							$con = new Connection\ClientConnection($client, count($this->connections_local) % count($this->connectionHandlers), $subs, $this->permanence);
-
-							$this->connections_local[] = $con;
-							$this->connections[] = $con;
-							$this->subscriptions[] = $subs;
+							$this->newConnection($client);
 						}
 					}
 				}
+
+				$this->checkThreads();
+				$this->cleanUpClosedConnections();
 			} catch(\Exception $e){
 				var_dump($e);
 			}
 		}
 	}
 
+	/**
+	 * @param $socket
+     */
+	private function newConnection(&$socket){
+		$subs = new \Stackable();
+		echo "New connection assigned to handler #" . (count($this->connections_local) % count($this->connectionHandlers)) . "\n";
+		$con = new Connection\ClientConnection($socket, count($this->connections_local) % count($this->connectionHandlers), $subs, $this->permanence);
+
+		$this->connections_local[] = $con;
+		$this->connections[] = $con;
+		$this->subscriptions[] = $subs;
+	}
+
+	/**
+	 *
+     */
+	private function checkThreads(){
+		foreach($this->connectionHandlers as &$handler){
+			if(!$handler->isRunning()){
+				echo "Thread #{$handler->id} has died, restarting...\n";
+				$id = $handler->id;
+				unset($handler);
+				$this->startHandler($id);
+			}
+		}
+	}
+
+	/**
+	 * @param $i
+     */
+	private function startHandler($i){
+		$handler = new ConnectionHandler($i, $this->connections, $this->application_secrets);
+		$this->connectionHandlers[] = $handler;
+		$handler->start();
+	}
+
+	/**
+	 *
+     */
+	private function cleanUpClosedConnections(){
+		foreach($this->connections as $i => &$connection){
+			if($connection->closed){
+				unset($this->connections[$i]);
+				//unset($this->connections_local[$i]);
+			} else {
+				$this->connections_local[$i]->ping();
+			}
+		}
+	}
+
+	/**
+	 * @param $payload
+	 * @return string
+     */
 	public static function unframe($payload) {
 		$length = ord($payload[1]) & 127;
 
@@ -118,6 +210,11 @@ class Server {
 		return $text;
 	}
 
+	/**
+	 * @param $text
+	 * @param int $opcode
+	 * @return string
+     */
 	public static function frame($text, $opcode = 0x1)
 	{
 		// 0x1 text frame (FIN + opcode)
@@ -137,6 +234,10 @@ class Server {
 		return $header . $text;
 	}
 
+	/**
+	 * @param $nodeAddress
+	 * @param $ctx
+     */
 	public function makeFriends($nodeAddress, $ctx){
 		$node = stream_socket_client('tls://' . $nodeAddress, $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
 		if(!$node || !$ctx || $errno || $errstr){

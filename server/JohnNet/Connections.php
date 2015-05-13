@@ -20,9 +20,9 @@ class Connections extends \Stackable {
      * @param $socket
      * @return bool|Connection\ClientConnection
      */
-    public function findByThreadIDAndSocket($thread, &$socket){
+    public function findByThreadIDAndName($thread, $socket){
         foreach($this as $i => &$connection){
-            if($connection->handlerID == $thread && $connection->socket == $socket){
+            if($connection->handlerID == $thread && $connection->name === $socket){
                 return $connection;
             }
         }
@@ -53,6 +53,22 @@ class Connections extends \Stackable {
         foreach($this as $connection) {
             if($connection->handlerID == $thread && !$connection->closed) {
                 $return[] = $connection->socket;
+            }
+        }
+
+        return $return;
+    }
+
+    /**
+     * @param $thread
+     * @return Connection\ClientConnection[]
+     */
+    public function getAllSocketsNamesByThread($thread){
+        $return = [];
+
+        foreach($this as $i => $connection) {
+            if($connection->handlerID == $thread ) {
+                $return[] = $connection->name;
             }
         }
 

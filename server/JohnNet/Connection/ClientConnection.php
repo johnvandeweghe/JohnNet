@@ -1,6 +1,7 @@
 <?php
 namespace JohnNet\Connection;
 
+use JohnNet\ConnectionHandler;
 use \JohnNet\Server;
 
 class ClientConnection extends Connection {
@@ -19,13 +20,23 @@ class ClientConnection extends Connection {
 
     public static $server;
 
-    public function __construct(&$socket, $handlerID, &$subscriptions, &$permanence){
+    public $id;
+
+    public $lastPing = 0;
+    public $ping = 0;
+
+    public $pings = 0;
+    public $pongs = 0;
+
+    public function __construct($socket, $handlerID, &$subscriptions, &$permanence){
         parent::__construct($socket, $handlerID);
         $this->subscriptions = $subscriptions;
         $this->permanence = $permanence;
+
+        $this->id = (string)$socket;
     }
 
-    public function handleRead($handler, $buffer){
+    public function handleRead(ConnectionHandler &$handler, $buffer){
         if(!$this->isHandshake){
             $handshake = $this->handshake($buffer);
             if($handshake !== true){
@@ -37,7 +48,6 @@ class ClientConnection extends Connection {
                 }
                 $this->writeRaw($err);
                 $this->close();
-                $handler->connections->remove($this);
             }
         } else {
             $opcode = ord($buffer[0]) & 15;
@@ -46,16 +56,17 @@ class ClientConnection extends Connection {
                 switch($opcode){
                     case 0x8: //Close
                         $this->close($data, true);
-                        $handler->connections->remove($this);
                         break;
                     case 0x9: //Ping
                         $this->writeWS($data, 0xA);
                         break;
                     case 0xA: //Pong
+                        $this->pongs++;
+                        $this->ping = round(microtime(true) - $this->lastPing, 1);
+                        echo "pong: " . $this->ping . "\n";
                         break;
                     default:
                         $this->close("Unknown control frame received");
-                        $handler->connections->remove($this);
                         break;
                 }
             } else {
@@ -229,7 +240,7 @@ class ClientConnection extends Connection {
 
     //Mark a user closed and send them $msg as the reason
     public function close($msg = '', $force = false){
-        var_dump('CLOSED', $msg, $force);
+        var_dump('CLOSED', $this->socket, $msg, $force);
         //If the conditions are right to send a message (handshake completed, not closed) send a close message
         if($this->isHandshake && !$this->closed && !$force) {
             $this->writeWS($msg, 0x8);
@@ -282,6 +293,14 @@ class ClientConnection extends Connection {
 
     public function loadSession($sessionKey){
 
+    }
+
+    public function ping(){
+        if($this->isReady()) {
+            $this->pings++;
+            $this->lastPing = microtime(true);
+            return $this->writeWS(md5(time()), 0x9);
+        }
     }
 
     public function writePayload($type, $payload){
