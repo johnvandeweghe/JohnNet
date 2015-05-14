@@ -22,9 +22,13 @@ abstract class Connection extends \Stackable {
     }
 
     public function writeRaw($payload){
-        if($this->closed)
+        if($this->closed || !is_resource($this->getProperSocket()))
             return false;
-        return fwrite(is_resource($this->socket) ? $this->socket : $this->rawSocket, $payload, strlen($payload));
+        return @fwrite($this->getProperSocket(), $payload, strlen($payload));
+    }
+
+    public function getProperSocket(){
+        return is_resource($this->socket) ? $this->socket : $this->rawSocket;
     }
 
     public function readOnce(){
@@ -52,8 +56,8 @@ abstract class Connection extends \Stackable {
     public function close(){
         $this->closed = true;
 
-        if(is_resource($this->socket) || is_resource($this->rawSocket)) {
-            stream_socket_shutdown(is_resource($this->socket) ? $this->socket : $this->rawSocket, STREAM_SHUT_RDWR);
+        if(is_resource($this->getProperSocket())) {
+            stream_socket_shutdown($this->getProperSocket(), STREAM_SHUT_RDWR);
             //This causes weird crashes. Let's just not close them.
             //fclose(is_resource($this->socket) ? $this->socket : $this->rawSocket);
         }
