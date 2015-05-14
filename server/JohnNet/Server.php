@@ -174,6 +174,7 @@ class Server {
 	 *
      */
 	private function cleanUpClosedConnections(){
+//		echo "Connections Length (BEFORE): " . $this->connections->count() . "\n";
 		foreach($this->connections as $i => &$connection){
 			if($connection->closed){
 				unset($this->connections[$i]);
@@ -182,6 +183,7 @@ class Server {
 				$this->connections_local[$i]->ping();
 			}
 		}
+//		echo "Connections Length (AFTER): " . $this->connections->count() . "\n";
 	}
 
 	/**

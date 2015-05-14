@@ -14,6 +14,14 @@ class Connections extends \Stackable {
 
     }
 
+    public function count(){
+        $i = 0;
+        foreach($this as $c){
+            $i++;
+        }
+        return $i;
+    }
+
 
     /**
      * @param $thread

@@ -240,7 +240,7 @@ class ClientConnection extends Connection {
 
     //Mark a user closed and send them $msg as the reason
     public function close($msg = '', $force = false){
-        var_dump('CLOSED', $this->socket, $msg, $force);
+//        var_dump('CLOSED', $this->socket, $msg, $force);
         //If the conditions are right to send a message (handshake completed, not closed) send a close message
         if($this->isHandshake && !$this->closed && !$force) {
             $this->writeWS($msg, 0x8);

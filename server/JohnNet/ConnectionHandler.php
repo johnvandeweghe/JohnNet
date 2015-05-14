@@ -69,7 +69,7 @@ class ConnectionHandler extends \Thread {
 
 //		echo "Reduced to " . count($livingSockets) . " open sockets\n";
 
-		echo "CONNECTIONS: " . implode(',', $this->connections->getAllSocketsNamesByThread($this->id)). "\n";
+//		echo "CONNECTIONS: " . implode(',', $this->connections->getAllSocketsNamesByThread($this->id)). "\n";
 
 		$actuallyHadData = false;
 
@@ -78,15 +78,16 @@ class ConnectionHandler extends \Thread {
 		if ($livingSockets && stream_select($livingSockets, $write, $except, 0, 500000) > 0) {
 			echo "thread #". $this->id . " Select found data in " . count($livingSockets) . " sockets\n";
 			foreach($livingSockets as $c=>$socket){
+//				echo "Processing #$c\n";
 				if(!is_resource($socket)){
 					continue;
 				}
 				$name = stream_socket_get_name($socket, true);
-				echo "Hunting for $name\n";
 				$connection = $this->findByThreadIDAndName($name);
 				if($connection == false){
 					continue;
 				}
+
 				$realSocket = $connection->socket;
 				$connection->socket = $socket;
 
@@ -96,16 +97,14 @@ class ConnectionHandler extends \Thread {
 
 				while ($remaining > 0) {
 					if (feof($socket)) {
-						echo "Close 2\n";
-						$connection->socket = $realSocket;
+//						echo "Close 2\n";
 						$connection->close();
 						continue 2;
 					}
 					$read = fread($socket, $remaining);
 
 					if ($read === false) {
-						echo "Close 3\n";
-						$connection->socket = $realSocket;
+//						echo "Close 3\n";
 						$connection->close();
 						continue 2;
 					}
@@ -121,8 +120,7 @@ class ConnectionHandler extends \Thread {
 					}
 
 					if (feof($socket)) {
-						echo "Close 4\n";
-						$connection->socket = $realSocket;
+//						echo "Processing of #$c complete with close 4\n";
 						$connection->close();
 						continue 2;
 					}

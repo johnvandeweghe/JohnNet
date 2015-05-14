@@ -22,6 +22,8 @@ abstract class Connection extends \Stackable {
     }
 
     public function writeRaw($payload){
+        if($this->closed)
+            return false;
         return fwrite(is_resource($this->socket) ? $this->socket : $this->rawSocket, $payload, strlen($payload));
     }
 
@@ -49,12 +51,15 @@ abstract class Connection extends \Stackable {
 
     public function close(){
         $this->closed = true;
-        if(is_resource($this->socket)) {
-            fclose($this->socket);
-            $this->socket = false;
-        } else {
-            $this->socket = false;
+
+        if(is_resource($this->socket) || is_resource($this->rawSocket)) {
+            stream_socket_shutdown(is_resource($this->socket) ? $this->socket : $this->rawSocket, STREAM_SHUT_RDWR);
+            //This causes weird crashes. Let's just not close them.
+            //fclose(is_resource($this->socket) ? $this->socket : $this->rawSocket);
         }
+
+        $this->socket = false;
+        $this->rawSocket = false;
     }
 
 }
