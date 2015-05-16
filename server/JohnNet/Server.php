@@ -24,6 +24,10 @@ class Server {
 	 * @var array
      */
 	public $subscriptions;
+	/**
+	 * @var ConnectionPermanence
+	 */
+	public $permanence;
 
 	/**
 	 * @var Connection\ClientConnection[]
@@ -68,7 +72,7 @@ class Server {
 		$this->connections = new Connections();
 		$this->permanence = new ConnectionPermanence();
 
-		self::$URL = $this->address . ':' . $this->port;
+		self::$URL = $this->address;
 	}
 
 	/**
@@ -165,7 +169,7 @@ class Server {
 	 * @param $i
      */
 	private function startHandler($i){
-		$handler = new ConnectionHandler($i, $this->connections, $this->application_secrets);
+		$handler = new ConnectionHandler($i, $this->connections, $this->application_secrets, $this->permanence);
 		$this->connectionHandlers[] = $handler;
 		$handler->start();
 	}
@@ -174,16 +178,16 @@ class Server {
 	 *
      */
 	private function cleanUpClosedConnections(){
-//		echo "Connections Length (BEFORE): " . $this->connections->count() . "\n";
+		echo "Connections Length (BEFORE): " . $this->connections->count() . "\n";
 		foreach($this->connections as $i => &$connection){
-			if($connection->closed){
+			if($connection->closed || $this->connections_local[$i]->pingsSincePong > 10){
 				unset($this->connections[$i]);
 				//unset($this->connections_local[$i]);
 			} else {
 				$this->connections_local[$i]->ping();
 			}
 		}
-//		echo "Connections Length (AFTER): " . $this->connections->count() . "\n";
+		echo "Connections Length (AFTER): " . $this->connections->count() . "\n";
 	}
 
 	/**

@@ -7,13 +7,14 @@ if(PHP_SAPI == "cli"){
 	require_once("JohnNet/Connection/ServerConnection.php");
 	require_once("JohnNet/Connections.php");
 	require_once("JohnNet/ConnectionPermanence.php");
+	require_once("JohnNet/Session.php");
 	require_once("config.php");
 
 	error_reporting(E_ALL);
 	set_time_limit(0);
 
-	$master = new \JohnNet\Server("localhost", 8080, $application_secrets);
-	$master->live(3, isset($argv[1]) ? $argv[1] : '');
+	$master = new \JohnNet\Server("localhost", 80, $application_secrets);
+	$master->live(1, isset($argv[1]) ? $argv[1] : '');
 }
 
 /*

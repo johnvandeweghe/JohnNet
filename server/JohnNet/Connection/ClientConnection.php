@@ -2,7 +2,9 @@
 namespace JohnNet\Connection;
 
 use JohnNet\ConnectionHandler;
+use JohnNet\ConnectionPermanence;
 use \JohnNet\Server;
+use JohnNet\Session;
 
 class ClientConnection extends Connection {
 
@@ -12,8 +14,8 @@ class ClientConnection extends Connection {
 
     public $isHandshake = false;
 
-    private $subscriptions;
-    private $permanence;
+    public $subscriptions;
+    public $permanence;
     public $applicationID;
 
     public $sessionKey = '';
@@ -25,10 +27,9 @@ class ClientConnection extends Connection {
     public $lastPing = 0;
     public $ping = 0;
 
-    public $pings = 0;
-    public $pongs = 0;
+    public $pingsSincePong = 0;
 
-    public function __construct($socket, $handlerID, &$subscriptions, &$permanence){
+    public function __construct($socket, $handlerID, \Stackable &$subscriptions, ConnectionPermanence &$permanence){
         parent::__construct($socket, $handlerID);
         $this->subscriptions = $subscriptions;
         $this->permanence = $permanence;
@@ -42,9 +43,9 @@ class ClientConnection extends Connection {
             if($handshake !== true){
                 $err = '';
                 if($handshake == 400){
-                    $err = "HTTP/1.1 400 Bad Request";
-                } elseif($handshake == 404){
-                    $err = "HTTP/1.1 404 Not Found";
+                    $err = "HTTP/1.0 400 Bad Request";
+                } elseif($handshake == 200){
+                    $err = "";
                 }
                 $this->writeRaw($err);
                 $this->close();
@@ -61,7 +62,7 @@ class ClientConnection extends Connection {
                         $this->writeWS($data, 0xA);
                         break;
                     case 0xA: //Pong
-                        $this->pongs++;
+                        $this->pingsSincePong = 0;
                         $this->ping = round(microtime(true) - $this->lastPing, 1);
                         echo "pong: " . $this->ping . "\n";
                         break;
@@ -89,7 +90,6 @@ class ClientConnection extends Connection {
                                 }
 
                                 if($this->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $handler)) {
-                                    echo "CLIENT REGISTERED\n";
                                     $this->writePayload('register', [
                                         'status' => 'success',
                                         'message' => 'Registered'
@@ -102,9 +102,7 @@ class ClientConnection extends Connection {
                                 ]);
                                 break;
                             case 'subscribe':
-                                var_dump(1);
                                 if($this->isReady()){
-                                    var_dump(2);
                                     if($this->subscribe($payload['payload']['channel'])) {
                                         $this->writePayload('subscribe', [
                                             'status' => 'success',
@@ -195,26 +193,41 @@ class ClientConnection extends Connection {
             $headers[$key] = $value;
         }
 
-        if(!isset($headers['Host']) ||
+        if(isset($headers['Host']) && ($get === '/text.html' || $get === '/JohnNet.js')){
+            echo $this->name . " has a page request for $get\n";
+            //Test page
+            $contents = file_get_contents('../client' . $get);
+            $response = "HTTP/1.0 200 OK\r\n" .
+                "Content-Type: " . ($get === '/text.html' ? 'html' : 'text/javascript') . "\r\n" .
+                "Content-Length: " . strlen($contents) . "\r\n\r\n" .
+                $contents;
+                $this->writeRaw($response);
+            return 200;
+        } elseif(!isset($headers['Host']) ||
             !(isset($headers['Upgrade']) && strtolower($headers['Upgrade']) == 'websocket') ||
             !(isset($headers['Connection']) && stristr($headers['Connection'], 'upgrade') !== false) ||
             !isset($headers['Sec-WebSocket-Key']) ||
             !(isset($headers['Sec-WebSocket-Version']) && $headers['Sec-WebSocket-Version'] == 13)
         ){
+            echo $this->name . " has a page request for $get\n";
             return 400;
         }
+        echo $this->name . " has a ws request for $get\n";
 
         if(isset($headers['Sec-WebSocket-Extensions']) && $headers['Sec-WebSocket-Extensions']){
             //$this->user->extensions = explode('; ', $headers['Sec-WebSocket-Extensions']);
         }
 
+        $loadSession = false;
         if(isset($headers["Cookie"])){
             $cookies = explode("; ", $headers["Cookie"]);
             if($cookies){
                 foreach($cookies as $cookie){
                     list($key, $value) = explode("=", $cookie);
+                    echo $cookie . "\n";
                     if($key == 'session_id'){
                         $this->sessionKey = $value;
+                        $loadSession = true;
                     }
                 }
             }
@@ -228,25 +241,39 @@ class ClientConnection extends Connection {
             "Upgrade: websocket\r\n" .
             "Connection: Upgrade\r\n" .
             "Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"] . Server::GUID, true)) . "\r\n" .
-            "Set-Cookie: session_id={$this->sessionKey}; Domain=" . Server::$URL . "; Path=/; Expires=" . $expires->format(\DateTime::COOKIE) . "; HttpOnly\r\n" .
+            "Set-Cookie: session_id={$this->sessionKey}; Domain=" . Server::$URL . "; Path=/; Expires=" . $expires->format(\DateTime::COOKIE) . "\r\n" .
             "\r\n";
 
         $this->writeRaw($upgrade);
         $this->isHandshake = true;
         $this->ready();
 
+//        if($loadSession){
+//            if($session = $this->permanence->findBySessionKey($this->sessionKey)){
+//                foreach($session->payloads as $payload){
+//                    $this->writePayload('payload', json_decode($payload, true));
+//                }
+//                $this->subscriptions = $session->subscriptions;
+//            }
+//        }
+
         return true;
     }
 
     //Mark a user closed and send them $msg as the reason
     public function close($msg = '', $force = false){
+        echo $this->name . " is closed\n";
 //        var_dump('CLOSED', $this->socket, $msg, $force);
         //If the conditions are right to send a message (handshake completed, not closed) send a close message
         if($this->isHandshake && !$this->closed && !$force) {
             $this->writeWS($msg, 0x8);
         }
 
-        //$this->permanence['sessions'] = $this->sessionKey;
+        echo "1\n";
+        if($this->isHandshake) {
+           // $this->permanence[] = new Session($this->sessionKey, time(), $this->subscriptions);
+        }
+        echo "2\n";
         parent::close();
     }
 
@@ -265,6 +292,7 @@ class ClientConnection extends Connection {
     }
 
     public function subscribe($channel){
+        //TODO: Subscriptions approval logic
         if(true){
             $this->subscriptions[] = $channel;
             return true;
@@ -291,13 +319,9 @@ class ClientConnection extends Connection {
         return false;
     }
 
-    public function loadSession($sessionKey){
-
-    }
-
     public function ping(){
         if($this->isReady()) {
-            $this->pings++;
+            $this->pingsSincePong++;
             $this->lastPing = microtime(true);
             return $this->writeWS(md5(time()), 0x9);
         }

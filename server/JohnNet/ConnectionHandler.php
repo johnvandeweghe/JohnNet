@@ -11,6 +11,10 @@ class ConnectionHandler extends \Thread {
 	 * @var Connections
      */
 	public $connections;
+	/**
+	 * @var ConnectionPermanence
+	 */
+	public $permanence;
 
 	/**
 	 * @var
@@ -26,11 +30,13 @@ class ConnectionHandler extends \Thread {
 	 * @param $id
 	 * @param Connections $connections
 	 * @param $application_secrets
-     */
-	function __construct($id, Connections &$connections, $application_secrets){
+	 * @param ConnectionPermanence $permanence
+	 */
+	function __construct($id, Connections &$connections, $application_secrets, ConnectionPermanence &$permanence){
 		$this->id = $id;
 		$this->application_secrets = $application_secrets;
 		$this->connections = $connections;
+		$this->permanence = $permanence;
 	}
 
 	/**
@@ -67,9 +73,9 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 
-//		echo "Reduced to " . count($livingSockets) . " open sockets\n";
+		echo "Reduced to " . count($livingSockets) . " open sockets\n";
 
-//		echo "CONNECTIONS: " . implode(',', $this->connections->getAllSocketsNamesByThread($this->id)). "\n";
+		echo "CONNECTIONS: " . implode(',', $this->connections->getAllSocketsNamesByThread($this->id)). "\n";
 
 		$actuallyHadData = false;
 
@@ -80,15 +86,17 @@ class ConnectionHandler extends \Thread {
 			foreach($livingSockets as $c=>$socket){
 //				echo "Processing #$c\n";
 				if(!is_resource($socket)){
+					echo "Skipping socket 1\n";
 					continue;
 				}
 				$name = stream_socket_get_name($socket, true);
 				$connection = $this->findByThreadIDAndName($name);
 				if($connection == false){
+					echo "Unable to find $name\n";
 					continue;
 				}
 
-				$realSocket = $connection->socket;
+				//$realSocket = $connection->socket;
 				$connection->socket = $socket;
 
 				$firstRead = true;
@@ -133,7 +141,6 @@ class ConnectionHandler extends \Thread {
 
 				$connection->handleRead($this, $contents);
 
-				$connection->socket = $realSocket;
 				$actuallyHadData = true;
 			}
 		} else {
@@ -162,19 +169,23 @@ class ConnectionHandler extends \Thread {
 	 * @param $applicationID
 	 * @param $channel
 	 * @param $payload
-	 * @param bool $exclude
+	 * @param bool|Connection\ClientConnection $exclude
      */
 	public function publish($applicationID, $channel, $payload, $exclude = false){
 		$clients = $this->connections->getAllByAppIDAndChannel($applicationID, $channel);
 
+		$payload = [
+			'channel' => $channel,
+			'payload' => $payload
+		];
+
 		foreach($clients as $client){
 			if($client !== $exclude) {
-				$client->writePayload('payload', [
-					'channel' => $channel,
-					'payload' => $payload
-				]);
+				$client->writePayload('payload', $payload);
 			}
 		}
+
+		//$this->permanence->addPayloadBySubscription($channel, json_encode($payload));
 	}
 
 }
