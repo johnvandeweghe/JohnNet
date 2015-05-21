@@ -73,7 +73,7 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 
-//		echo "Reduced to " . count($livingSockets) . " open sockets\n";
+		echo "Reduced to " . count($livingSockets) . " open sockets\n";
 
 		echo "CONNECTIONS: " . implode(',', $this->connections->getAllSocketsNamesByThread($this->id)). "\n";
 
@@ -96,7 +96,6 @@ class ConnectionHandler extends \Thread {
 					continue;
 				}
 
-				//$realSocket = $connection->socket;
 				$connection->socket = $socket;
 
 				$firstRead = true;
@@ -141,7 +140,6 @@ class ConnectionHandler extends \Thread {
 
 				$connection->handleRead($this, $contents);
 
-				$connection->socket = $connection->rawSocket;
 				$actuallyHadData = true;
 			}
 		} else {

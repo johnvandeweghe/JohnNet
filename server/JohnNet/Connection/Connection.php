@@ -2,7 +2,7 @@
 namespace JohnNet\Connection;
 
 
-abstract class Connection {
+abstract class Connection extends \Stackable {
     public $socket;
 
     //Raw, original socket. "$socket" is temporarily not this when read from another thread

@@ -60,7 +60,7 @@ class Connections extends \Stackable {
 
         foreach($this as $connection) {
             if($connection->handlerID == $thread && !$connection->closed) {
-                $return[] = $connection->rawSocket;
+                $return[] = $connection->socket;
             }
         }
 

@@ -257,6 +257,7 @@ class ClientConnection extends Connection {
         if($loadSession){
             if($session = $this->permanence->findBySessionKey($this->sessionKey)){
                 foreach($session->payloads as $payload){
+                    echo "Sending session payload!\n";
                     //$this->writePayload('payload', json_decode($payload, true));
                 }
                 //$this->subscriptions = $session->subscriptions;
@@ -277,7 +278,8 @@ class ClientConnection extends Connection {
 
         echo "1\n";
         if($this->isHandshake) {
-            $this->permanence[] = new Session($this->sessionKey, time(), $this->subscriptions);
+            echo "Creating session!\n";
+            //$this->permanence[] = new Session($this->sessionKey, time(), $this->subscriptions);
         }
         echo "2\n";
         parent::close();

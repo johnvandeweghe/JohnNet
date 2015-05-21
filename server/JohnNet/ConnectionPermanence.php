@@ -28,12 +28,13 @@ class ConnectionPermanence extends \Stackable {
             if(!$session->expired()){
                 foreach($session->subscriptions as $subscription){
                     if($subscription == $channel){
-                        echo "Added payload to session\n";
-                        $session->payloads[] = $payload;
+                        echo "Added payload to session: {$session->key}\n";
+                        //$session->payloads[] = $payload;
                         break;
                     }
                 }
             } else {
+                echo "Found expired session: {$session->key}\n";
                 unset($this[$i]);
             }
         }
