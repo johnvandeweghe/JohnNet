@@ -2,7 +2,7 @@
 namespace JohnNet\Connection;
 
 
-abstract class Connection extends \Stackable {
+abstract class Connection {
     public $socket;
 
     //Raw, original socket. "$socket" is temporarily not this when read from another thread
@@ -28,7 +28,11 @@ abstract class Connection extends \Stackable {
     }
 
     public function getProperSocket(){
-        return is_resource($this->socket) ? $this->socket : $this->rawSocket;
+        return $this->socket;//is_resource($this->socket) ? $this->socket : $this->rawSocket;
+    }
+
+    public function name(){
+        return stream_socket_get_name($this->socket, true);
     }
 
     public function readOnce(){
@@ -54,12 +58,13 @@ abstract class Connection extends \Stackable {
     }
 
     public function close(){
+        echo "closed!\n";
         $this->closed = true;
 
         if(is_resource($this->getProperSocket())) {
             stream_socket_shutdown($this->getProperSocket(), STREAM_SHUT_RDWR);
             //This causes weird crashes. Let's just not close them.
-            //fclose(is_resource($this->socket) ? $this->socket : $this->rawSocket);
+            //@fclose($this->getProperSocket());
         }
 
         $this->socket = false;

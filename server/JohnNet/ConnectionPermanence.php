@@ -26,15 +26,12 @@ class ConnectionPermanence extends \Stackable {
     public function addPayloadBySubscription($channel, $payload){
         foreach($this as $i => $session){
             if(!$session->expired()){
-                $has_channel = false;
                 foreach($session->subscriptions as $subscription){
                     if($subscription == $channel){
-                        $has_channel = true;
+                        echo "Added payload to session\n";
+                        $session->payloads[] = $payload;
                         break;
                     }
-                }
-                if($has_channel){
-                    $session->payloads[] = $payload;
                 }
             } else {
                 unset($this[$i]);

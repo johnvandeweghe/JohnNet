@@ -88,7 +88,7 @@ var JohnNet = function(app_id, app_secret, debug){
 
 	this.connect = function(){
 		log('Reconnecting...');
-		websocket = new WebSocket('ws://localhost');
+		websocket = new WebSocket('ws://192.168.0.3');
 		websocket.onerror = onError;
 		websocket.onmessage = onMessage;
 		websocket.onclose = onClose;

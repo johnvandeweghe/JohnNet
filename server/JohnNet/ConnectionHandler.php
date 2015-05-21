@@ -73,7 +73,7 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 
-		echo "Reduced to " . count($livingSockets) . " open sockets\n";
+//		echo "Reduced to " . count($livingSockets) . " open sockets\n";
 
 		echo "CONNECTIONS: " . implode(',', $this->connections->getAllSocketsNamesByThread($this->id)). "\n";
 
@@ -105,14 +105,14 @@ class ConnectionHandler extends \Thread {
 
 				while ($remaining > 0) {
 					if (feof($socket)) {
-//						echo "Close 2\n";
+						echo "Close 2\n";
 						$connection->close();
 						continue 2;
 					}
 					$read = fread($socket, $remaining);
 
 					if ($read === false) {
-//						echo "Close 3\n";
+						echo "Close 3\n";
 						$connection->close();
 						continue 2;
 					}
@@ -128,7 +128,7 @@ class ConnectionHandler extends \Thread {
 					}
 
 					if (feof($socket)) {
-//						echo "Processing of #$c complete with close 4\n";
+						echo "Processing of #$c complete with close 4\n";
 						$connection->close();
 						continue 2;
 					}
@@ -141,6 +141,7 @@ class ConnectionHandler extends \Thread {
 
 				$connection->handleRead($this, $contents);
 
+				$connection->socket = $connection->rawSocket;
 				$actuallyHadData = true;
 			}
 		} else {
@@ -185,7 +186,7 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 
-		//$this->permanence->addPayloadBySubscription($channel, json_encode($payload));
+		$this->permanence->addPayloadBySubscription($channel, json_encode($payload));
 	}
 
 }

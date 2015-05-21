@@ -13,7 +13,7 @@ if(PHP_SAPI == "cli"){
 	error_reporting(E_ALL);
 	set_time_limit(0);
 
-	$master = new \JohnNet\Server("localhost", 80, $application_secrets);
+	$master = new \JohnNet\Server("192.168.0.3", 80, $application_secrets);
 	$master->live(1, isset($argv[1]) ? $argv[1] : '');
 }
 

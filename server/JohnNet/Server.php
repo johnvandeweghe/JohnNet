@@ -63,7 +63,7 @@ class Server {
 	/**
 	 * @param $address
 	 * @param int $port
-	 * @param bool $application_secrets
+	 * @param bool|\Stackable $application_secrets
      */
 	function __construct($address, $port=443, $application_secrets=false){
 		$this->address = $address;
@@ -114,6 +114,7 @@ class Server {
 
 
 		while(true) {
+			echo "Main thread alive\n";
 			try {
 				$changed = $this->listeners;
 				$write = NULL;
@@ -178,7 +179,7 @@ class Server {
 	 *
      */
 	private function cleanUpClosedConnections(){
-		echo "Connections Length (BEFORE): " . $this->connections->count() . "\n";
+//		echo "Connections Length (BEFORE): " . $this->connections->count() . "\n";
 		foreach($this->connections as $i => &$connection){
 			if($connection->closed || $this->connections_local[$i]->pingsSincePong > 10){
 				unset($this->connections[$i]);
@@ -187,7 +188,7 @@ class Server {
 				$this->connections_local[$i]->ping();
 			}
 		}
-		echo "Connections Length (AFTER): " . $this->connections->count() . "\n";
+//		echo "Connections Length (AFTER): " . $this->connections->count() . "\n";
 	}
 
 	/**

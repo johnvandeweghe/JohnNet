@@ -13,7 +13,7 @@ class Session {
         $this->sessionKey = $sessionKey;
         $this->lastSeen = $lastSeen;
         $this->subscriptions = $subscriptions;
-        $this->payloads = [];
+        $this->payloads = new \Stackable;
         $this->expiration = $expiration;
     }
 

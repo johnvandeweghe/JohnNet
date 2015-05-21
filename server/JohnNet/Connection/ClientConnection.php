@@ -56,6 +56,7 @@ class ClientConnection extends Connection {
             if($opcode >= 0x8 && $opcode <= 0xF){
                 switch($opcode){
                     case 0x8: //Close
+                        echo "Received close\n";
                         $this->close($data, true);
                         break;
                     case 0x9: //Ping
@@ -67,6 +68,7 @@ class ClientConnection extends Connection {
                         echo "pong: " . $this->ping . "\n";
                         break;
                     default:
+                        echo "unknown control frame received\n";
                         $this->close("Unknown control frame received");
                         break;
                 }
@@ -193,13 +195,36 @@ class ClientConnection extends Connection {
             $headers[$key] = $value;
         }
 
+        echo implode(',', array_keys($headers)) . "\n";
+
+        $loadSession = false;
+        if(isset($headers["Cookie"])){
+            $cookies = explode("; ", $headers["Cookie"]);
+
+            if($cookies){
+                foreach($cookies as $cookie){
+                    list($key, $value) = explode("=", $cookie);
+                    echo $cookie . "\n";
+                    if($key == 'session_id'){
+                        $this->sessionKey = $value;
+                        $loadSession = true;
+                    }
+                }
+            }
+        } else {
+            $this->sessionKey = md5(microtime(true).rand());
+        }
+        $expires = new \DateTime('1 week');
+
         if(isset($headers['Host']) && ($get === '/text.html' || $get === '/JohnNet.js')){
             echo $this->name . " has a page request for $get\n";
             //Test page
             $contents = file_get_contents('../client' . $get);
             $response = "HTTP/1.0 200 OK\r\n" .
                 "Content-Type: " . ($get === '/text.html' ? 'html' : 'text/javascript') . "\r\n" .
-                "Content-Length: " . strlen($contents) . "\r\n\r\n" .
+                "Content-Length: " . strlen($contents) . "\r\n".
+                "Set-Cookie: session_id={$this->sessionKey}; Path=/; Domain=" . Server::$URL . "; Expires=" . $expires->format(\DateTime::COOKIE) . "\r\n" .
+                "Server: JohnNet 0.0\r\n\r\n" .
                 $contents;
                 $this->writeRaw($response);
             return 200;
@@ -218,44 +243,25 @@ class ClientConnection extends Connection {
             //$this->user->extensions = explode('; ', $headers['Sec-WebSocket-Extensions']);
         }
 
-        $loadSession = false;
-        if(isset($headers["Cookie"])){
-            $cookies = explode("; ", $headers["Cookie"]);
-            if($cookies){
-                foreach($cookies as $cookie){
-                    list($key, $value) = explode("=", $cookie);
-                    echo $cookie . "\n";
-                    if($key == 'session_id'){
-                        $this->sessionKey = $value;
-                        $loadSession = true;
-                    }
-                }
-            }
-        } else {
-            $this->sessionKey = md5(microtime(true).rand());
-        }
-
-        $expires = new \DateTime('1 week');
-
         $upgrade = "HTTP/1.1 101 Switching Protocols\r\n" .
             "Upgrade: websocket\r\n" .
             "Connection: Upgrade\r\n" .
             "Sec-WebSocket-Accept: " . base64_encode(sha1($headers["Sec-WebSocket-Key"] . Server::GUID, true)) . "\r\n" .
-            "Set-Cookie: session_id={$this->sessionKey}; Domain=" . Server::$URL . "; Path=/; Expires=" . $expires->format(\DateTime::COOKIE) . "\r\n" .
+            "Set-Cookie: session_id={$this->sessionKey}; Path=/; Domain=" . Server::$URL . "; Expires=" . $expires->format(\DateTime::COOKIE) . "\r\n" .
             "\r\n";
 
         $this->writeRaw($upgrade);
         $this->isHandshake = true;
         $this->ready();
 
-//        if($loadSession){
-//            if($session = $this->permanence->findBySessionKey($this->sessionKey)){
-//                foreach($session->payloads as $payload){
-//                    $this->writePayload('payload', json_decode($payload, true));
-//                }
-//                $this->subscriptions = $session->subscriptions;
-//            }
-//        }
+        if($loadSession){
+            if($session = $this->permanence->findBySessionKey($this->sessionKey)){
+                foreach($session->payloads as $payload){
+                    //$this->writePayload('payload', json_decode($payload, true));
+                }
+                //$this->subscriptions = $session->subscriptions;
+            }
+        }
 
         return true;
     }
@@ -271,7 +277,7 @@ class ClientConnection extends Connection {
 
         echo "1\n";
         if($this->isHandshake) {
-           // $this->permanence[] = new Session($this->sessionKey, time(), $this->subscriptions);
+            $this->permanence[] = new Session($this->sessionKey, time(), $this->subscriptions);
         }
         echo "2\n";
         parent::close();
@@ -320,8 +326,8 @@ class ClientConnection extends Connection {
     }
 
     public function ping(){
+        $this->pingsSincePong++;
         if($this->isReady()) {
-            $this->pingsSincePong++;
             $this->lastPing = microtime(true);
             return $this->writeWS(md5(time()), 0x9);
         }
