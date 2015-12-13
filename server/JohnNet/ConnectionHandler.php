@@ -73,7 +73,7 @@ class ConnectionHandler extends \Thread {
 			}
 		}
 
-		echo "Reduced to " . count($livingSockets) . " open sockets\n";
+//		echo "Reduced to " . count($livingSockets) . " open sockets\n";
 
 		echo "CONNECTIONS: " . implode(',', $this->connections->getAllSocketsNamesByThread($this->id)). "\n";
 

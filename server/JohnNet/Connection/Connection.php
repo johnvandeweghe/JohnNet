@@ -28,7 +28,7 @@ abstract class Connection extends \Stackable {
     }
 
     public function getProperSocket(){
-        return $this->socket;//is_resource($this->socket) ? $this->socket : $this->rawSocket;
+        return is_resource($this->socket) ? $this->socket : $this->rawSocket;
     }
 
     public function name(){

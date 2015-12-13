@@ -11,7 +11,7 @@ var JohnNet = function(app_id, app_secret, debug){
 	var eventHandlers = [];
 
 	var sendPayload = function(type, payload){
-		return websocket.send(JSON.stringify({'type': type, 'payload': payload}));
+		return websocket.send(JSON.stringify({'type': type, 'payload': payload}) + "\0");
 	};
 
 	var log = function(){
@@ -66,6 +66,9 @@ var JohnNet = function(app_id, app_secret, debug){
 					break;
 				case 'system':
 					_this.fireEvent('system_message', payload);
+					break;
+				case 'ping':
+					sendPayload('pong', payload);
 					break;
 			}
 		}

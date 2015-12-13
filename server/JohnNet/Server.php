@@ -182,6 +182,7 @@ class Server {
 //		echo "Connections Length (BEFORE): " . $this->connections->count() . "\n";
 		foreach($this->connections as $i => &$connection){
 			if($connection->closed || $this->connections_local[$i]->pingsSincePong > 10){
+				echo "Closing connection with {$this->connections_local[$i]->pingsSincePong} pings\n";
 				unset($this->connections[$i]);
 				//unset($this->connections_local[$i]);
 			} else {

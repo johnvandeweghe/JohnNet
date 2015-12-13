@@ -63,9 +63,7 @@ class ClientConnection extends Connection {
                         $this->writeWS($data, 0xA);
                         break;
                     case 0xA: //Pong
-                        $this->pingsSincePong = 0;
-                        $this->ping = round(microtime(true) - $this->lastPing, 1);
-                        echo "pong: " . $this->ping . "\n";
+                        $this->pong();
                         break;
                     default:
                         echo "unknown control frame received\n";
@@ -76,11 +74,14 @@ class ClientConnection extends Connection {
                 if($opcode === 0x0){
                     $this->buffer .= $data;
                 } else {
-                    $payload = json_decode($this->buffer . $data, true);
-                    $this->buffer = '';
+                    $this->buffer .= $data;
+                    $payload = json_decode( $this->buffer, true);
 
-                    if($payload && isset($payload['type']) && isset($payload['payload']) && $opcode === 0x1){
-                        switch($payload['type']) {
+                    if ($payload && isset($payload['type']) && isset($payload['payload']) && $opcode === 0x1) {
+                        switch ($payload['type']) {
+                            case 'pong':
+                                $this->pong();
+                                break;
                             case 'register':
                                 //Register user to application
                                 if (!isset($payload['payload']['app_id']) || !isset($payload['payload']['app_secret'])) {
@@ -91,7 +92,7 @@ class ClientConnection extends Connection {
                                     break;
                                 }
 
-                                if($this->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $handler)) {
+                                if ($this->register($payload['payload']['app_id'], $payload['payload']['app_secret'], $handler)) {
                                     $this->writePayload('register', [
                                         'status' => 'success',
                                         'message' => 'Registered'
@@ -104,8 +105,8 @@ class ClientConnection extends Connection {
                                 ]);
                                 break;
                             case 'subscribe':
-                                if($this->isReady()){
-                                    if($this->subscribe($payload['payload']['channel'])) {
+                                if ($this->isReady()) {
+                                    if ($this->subscribe($payload['payload']['channel'])) {
                                         $this->writePayload('subscribe', [
                                             'status' => 'success',
                                             'message' => 'Subscribed to channel'
@@ -124,8 +125,8 @@ class ClientConnection extends Connection {
                                 }
                                 break;
                             case 'unsubscribe':
-                                if($this->isReady()){
-                                    if($this->isSubscribed($payload['payload']['channel'])){
+                                if ($this->isReady()) {
+                                    if ($this->isSubscribed($payload['payload']['channel'])) {
                                         $this->unsubscribe($payload['payload']['channel']);
                                         $this->writePayload('subscribe', [
                                             'status' => 'success',
@@ -145,9 +146,9 @@ class ClientConnection extends Connection {
                                 }
                                 break;
                             case 'publish':
-                                if($this->isReady()){
-                                    if($sub = $this->isSubscribed($payload['payload']['channel'])){
-                                        if(isset($payload['payload']['payload']) && isset($payload['payload']['channel'])){
+                                if ($this->isReady()) {
+                                    if ($sub = $this->isSubscribed($payload['payload']['channel'])) {
+                                        if (isset($payload['payload']['payload']) && isset($payload['payload']['channel'])) {
                                             $handler->publish($this->applicationID, $payload['payload']['channel'], $payload['payload']['payload'], $this);
                                             $this->writePayload('publish', [
                                                 'status' => 'success',
@@ -178,7 +179,10 @@ class ClientConnection extends Connection {
                             'status' => 'failed',
                             'message' => 'Invalid data received. JSON only.'
                         ]);
+
+                        echo "Received: " . $data . "\n";
                     }
+                    $this->buffer = '';
                 }
             }
         }
@@ -195,8 +199,6 @@ class ClientConnection extends Connection {
             $headers[$key] = $value;
         }
 
-        echo implode(',', array_keys($headers)) . "\n";
-
         $loadSession = false;
         if(isset($headers["Cookie"])){
             $cookies = explode("; ", $headers["Cookie"]);
@@ -204,7 +206,6 @@ class ClientConnection extends Connection {
             if($cookies){
                 foreach($cookies as $cookie){
                     list($key, $value) = explode("=", $cookie);
-                    echo $cookie . "\n";
                     if($key == 'session_id'){
                         $this->sessionKey = $value;
                         $loadSession = true;
@@ -328,11 +329,18 @@ class ClientConnection extends Connection {
     }
 
     public function ping(){
-        $this->pingsSincePong++;
         if($this->isReady()) {
+            $this->pingsSincePong++;
             $this->lastPing = microtime(true);
-            return $this->writeWS(md5(time()), 0x9);
+            return $this->writePayload('ping', $this->lastPing);
         }
+        return false;
+    }
+
+    public function pong(){
+        $this->pingsSincePong = 0;
+        $this->ping = round(microtime(true) - $this->lastPing, 1);
+        echo "pong: " . $this->ping . "\n";
     }
 
     public function writePayload($type, $payload){
